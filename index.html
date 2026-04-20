@@ -510,7 +510,7 @@
 
         // ================= API FETCH =================
         async function fetchAPI(payload) {
-            if(API_URL === " mm URL_APPS_SCRIPT_ANDA_DISINI") { showToast("Set API URL di kode HTML!", "error"); return null; }
+            if(API_URL === "URL_APPS_SCRIPT_ANDA_DISINI") { showToast("Set API URL di kode HTML!", "error"); return null; }
             try {
                 const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
                 const text = await res.text();
@@ -524,7 +524,7 @@
         }
 
         async function loadData() {
-            if(API_URL === "https://script.google.com/macros/s/AKfycbz_Q5YI-xXZ2gwS_vs0CAC8KiloAw4TKjik-vflTb3u3T_WihdUUxQduKJ_6z-KGi1riw/exec") return;
+            if(API_URL === "URL_APPS_SCRIPT_ANDA_DISINI") return;
             
             // Tampilkan Skeleton Shimmer di tabel saat loading data
             renderSkeleton('tbodyMaster', 6);
