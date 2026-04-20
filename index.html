@@ -56,6 +56,11 @@
             box-shadow: 0 4px 15px rgba(59, 130, 246, 0.15); transform: scale(1.02);
         }
         
+        /* Custom Scrollbar for Dropdown */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #4b5563; border-radius: 20px; }
+        
         /* Skeleton Shimmer Loader (Modern Table Loading) */
         .skeleton-box { position: relative; overflow: hidden; background-color: #1f2937; border-radius: 0.375rem; }
         .skeleton-box::after {
@@ -173,9 +178,14 @@
                             <label class="block text-xs text-blue-400 mb-1 font-semibold">Cari & Pilih Kode Aset</label>
                             <div class="relative">
                                 <i data-lucide="search" class="absolute left-4 top-3.5 text-gray-400 w-5 h-5"></i>
-                                <input type="text" id="c_kodeAset" list="listKode" autocomplete="off" required placeholder="Ketik kode atau nama..." class="w-full bg-gray-800 border border-blue-900/50 rounded-xl pl-12 pr-4 py-3.5 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all shadow-inner">
+                                <!-- Custom Autocomplete Input (Removed datalist) -->
+                                <input type="text" id="c_kodeAset" autocomplete="off" required placeholder="Ketik kode atau nama..." class="w-full bg-gray-800 border border-blue-900/50 rounded-xl pl-12 pr-4 py-3.5 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all shadow-inner">
+                                
+                                <!-- Custom Dropdown Container -->
+                                <div id="autocompleteDropdown" class="hidden absolute w-full mt-2 bg-gray-800 border border-gray-600 rounded-xl shadow-2xl z-[101] max-h-56 overflow-y-auto overflow-x-hidden custom-scrollbar">
+                                    <!-- Options will be injected here via JS -->
+                                </div>
                             </div>
-                            <datalist id="listKode"></datalist>
                         </div>
                     </div>
 
@@ -380,11 +390,18 @@
             document.getElementById('searchMaster').addEventListener('input', renderMaster);
             document.getElementById('searchCek').addEventListener('input', renderCek);
 
-            // Setup Auto-fill Kode Aset saat Cek Lapangan
+            setupCustomAutocomplete();
+        });
+
+        // ================= CUSTOM MOBILE-FRIENDLY AUTOCOMPLETE =================
+        function setupCustomAutocomplete() {
             const inputCekKode = document.getElementById('c_kodeAset');
-            inputCekKode.addEventListener('input', (e) => {
-                const val = e.target.value.split(" - ")[0].trim();
-                const asset = dbMaster.find(a => a['Kode Aset'] === val);
+            const dropdownKode = document.getElementById('autocompleteDropdown');
+
+            // Fungsi untuk update info box aset saat valid
+            function checkAssetInfo(val) {
+                const pureKode = val.split(" - ")[0].trim();
+                const asset = dbMaster.find(a => a['Kode Aset'] === pureKode);
                 const infoBox = document.getElementById('c_infoBox');
                 
                 if(asset) {
@@ -397,8 +414,56 @@
                     document.getElementById('c_lblNama').innerText = '';
                     document.getElementById('c_lblLokasi').innerText = '';
                 }
+            }
+
+            // Fungsi untuk me-render dropdown custom
+            function renderAutocomplete(term) {
+                if (!dbMaster || dbMaster.length === 0) return;
+                
+                const lowerTerm = term.toLowerCase();
+                // Filter cari berdasarkan kode ATAU nama
+                const filtered = dbMaster.filter(a => a['Kode Aset'].toLowerCase().includes(lowerTerm) || a['Nama Aset'].toLowerCase().includes(lowerTerm));
+                
+                dropdownKode.innerHTML = '';
+                if(filtered.length > 0) {
+                    filtered.forEach(a => {
+                        const item = document.createElement('div');
+                        item.className = "px-4 py-3 hover:bg-gray-700 cursor-pointer text-sm text-white border-b border-gray-700/50 last:border-0 transition-colors flex flex-col sm:flex-row sm:items-center sm:justify-between";
+                        item.innerHTML = `
+                            <div class="truncate"><span class="font-mono text-blue-400 font-semibold mr-2">${a['Kode Aset']}</span></div>
+                            <div class="text-gray-300 text-xs sm:text-sm truncate mt-0.5 sm:mt-0">${a['Nama Aset']}</div>
+                        `;
+                        
+                        // Gunakan mousedown agar event trigger sebelum input kehilangan fokus (blur) di HP
+                        item.onmousedown = (e) => {
+                            e.preventDefault(); 
+                            inputCekKode.value = `${a['Kode Aset']} - ${a['Nama Aset']}`;
+                            dropdownKode.classList.add('hidden');
+                            checkAssetInfo(inputCekKode.value);
+                        };
+                        dropdownKode.appendChild(item);
+                    });
+                    dropdownKode.classList.remove('hidden');
+                } else {
+                    dropdownKode.innerHTML = `<div class="px-4 py-4 text-sm text-gray-500 italic text-center">Tidak ada aset ditemukan</div>`;
+                    dropdownKode.classList.remove('hidden');
+                }
+            }
+
+            // Listeners
+            inputCekKode.addEventListener('focus', () => renderAutocomplete(inputCekKode.value));
+            
+            inputCekKode.addEventListener('input', (e) => {
+                renderAutocomplete(e.target.value);
+                checkAssetInfo(e.target.value); // Hapus infobox jika teks diedit jadi salah
             });
-        });
+            
+            // Sembunyikan dropdown jika klik di luar
+            inputCekKode.addEventListener('blur', () => {
+                dropdownKode.classList.add('hidden');
+            });
+        }
+
 
         // ================= UI FEEDBACK & LOADERS =================
         function showGlobalLoad(show, txt="Memproses data...") {
@@ -475,16 +540,6 @@
             
             let activeBtn = document.getElementById('btnNav' + target.charAt(0).toUpperCase() + target.slice(1));
             activeBtn.className = "btn-interactive whitespace-nowrap px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all bg-blue-600 text-white shadow-lg shadow-blue-900/20";
-
-            if (target === 'cek' && dbMaster.length > 0) {
-                const dlist = document.getElementById('listKode');
-                dlist.innerHTML = '';
-                dbMaster.forEach(a => {
-                    let opt = document.createElement('option');
-                    opt.value = `${a['Kode Aset']} - ${a['Nama Aset']}`;
-                    dlist.appendChild(opt);
-                });
-            }
         }
 
         function switchDashTab(tab) {
@@ -506,7 +561,7 @@
 
         // ================= API FETCH =================
         async function fetchAPI(payload) {
-            if(API_URL === "URL_APPS_SCRIPT_ANDA_DISINI") { showToast("Set API URL di kode HTML!", "error"); return null; }
+            if(API_URL === " mm URL_APPS_SCRIPT_ANDA_DISINI") { showToast("Set API URL di kode HTML!", "error"); return null; }
             try {
                 const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
                 const text = await res.text();
@@ -520,7 +575,7 @@
         }
 
         async function loadData() {
-            if(API_URL === "URL_APPS_SCRIPT_ANDA_DISINI") return;
+            if(API_URL === "https://script.google.com/macros/s/AKfycbz_Q5YI-xXZ2gwS_vs0CAC8KiloAw4TKjik-vflTb3u3T_WihdUUxQduKJ_6z-KGi1riw/exec") return;
             
             // Tampilkan Skeleton Shimmer di tabel saat loading data
             renderSkeleton('tbodyMaster', 6);
