@@ -6,23 +6,65 @@
     <title>Sistem Manajemen Aset BUMDes</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        tailwind.config = { darkMode: 'class', theme: { extend: { colors: { gray: { 850: '#1f2937', 900: '#111827', 950: '#030712' } } } } }
+        tailwind.config = { 
+            darkMode: 'class', 
+            theme: { 
+                extend: { 
+                    colors: { 
+                        gray: { 850: '#1f2937', 900: '#111827', 950: '#030712' } 
+                    },
+                    animation: {
+                        'fade-slide-up': 'fadeSlideUp 0.4s ease-out forwards',
+                    },
+                    keyframes: {
+                        fadeSlideUp: {
+                            '0%': { opacity: '0', transform: 'translateY(15px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
+                    }
+                } 
+            } 
+        }
     </script>
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Lucide Icons (SaaS Standard SVG Icons) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
     <style>
         body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
         .hidden-view { display: none !important; }
+        
+        /* Smooth Micro-Interactions */
+        .btn-interactive { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        .btn-interactive:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); }
+        .btn-interactive:active:not(:disabled) { transform: scale(0.97); }
+
+        /* Card Animation Entry */
+        .card-view { animation: fadeSlideUp 0.4s ease-out forwards; }
+
+        /* Modern Radio / Checkbox Cards */
         .radio-card input[type="radio"] { display: none; }
         .radio-card label {
             display: flex; align-items: center; justify-content: center; padding: 1rem 0.5rem; 
-            border: 2px solid #374151; border-radius: 0.75rem; cursor: pointer; transition: all 0.2s; 
+            border: 2px solid #374151; border-radius: 0.75rem; cursor: pointer; 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
             background: #1f2937; text-align: center; font-size: 0.875rem; font-weight: 500; color: #9ca3af;
         }
+        .radio-card label:active { transform: scale(0.95); }
         .radio-card input[type="radio"]:checked + label {
-            border-color: #3b82f6; background: rgba(59, 130, 246, 0.1); color: #60a5fa; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+            border-color: #3b82f6; background: rgba(59, 130, 246, 0.1); color: #60a5fa; 
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.15); transform: scale(1.02);
         }
         
+        /* Skeleton Shimmer Loader (Modern Table Loading) */
+        .skeleton-box { position: relative; overflow: hidden; background-color: #1f2937; border-radius: 0.375rem; }
+        .skeleton-box::after {
+            position: absolute; top: 0; right: 0; bottom: 0; left: 0; transform: translateX(-100%);
+            background-image: linear-gradient(90deg, rgba(255,255,255, 0) 0, rgba(255,255,255, 0.04) 20%, rgba(255,255,255, 0.08) 60%, rgba(255,255,255, 0));
+            animation: shimmer 1.5s infinite; content: '';
+        }
+        @keyframes shimmer { 100% { transform: translateX(100%); } }
+
         /* Print Template */
         #exportTemplate { display: none; background: white; color: black; padding: 40px; font-family: 'Times New Roman', Times, serif; font-size: 14px; width: 800px; margin: 0 auto; box-sizing: border-box; }
         .doc-header { text-align: center; font-weight: bold; font-size: 18px; margin-bottom: 30px; text-decoration: underline; }
@@ -36,61 +78,55 @@
 <body class="bg-gray-950 text-gray-100 antialiased min-h-screen flex flex-col">
 
     <!-- Top Navigation -->
-    <nav class="bg-gray-900 border-b border-gray-800 sticky top-0 z-50">
+    <nav class="bg-gray-900 border-b border-gray-800 sticky top-0 z-50 shadow-sm">
         <div class="max-w-5xl mx-auto px-4 py-3 flex flex-col sm:flex-row justify-between items-center gap-3">
             <div class="flex items-center gap-2 w-full sm:w-auto">
-                <i class="ph-fill ph-database text-blue-500 text-2xl"></i>
-                <h1 class="font-bold text-lg tracking-tight">BUMDes Asset<span class="text-blue-500">Pro</span></h1>
+                <div class="bg-blue-600 p-1.5 rounded-lg">
+                    <i data-lucide="database" class="w-5 h-5 text-white"></i>
+                </div>
+                <h1 class="font-bold text-lg tracking-tight">BUMDes<span class="text-blue-500">Pro</span></h1>
             </div>
             <div class="flex gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0 scrollbar-hide">
-                <button onclick="nav('master')" id="btnNavMaster" class="whitespace-nowrap px-4 py-2 rounded-lg bg-gray-800 text-gray-300 text-sm font-medium transition active:scale-95"><i class="ph ph-plus-circle"></i> Master Aset</button>
-                <button onclick="nav('cek')" id="btnNavCek" class="whitespace-nowrap px-4 py-2 rounded-lg bg-gray-800 text-gray-300 text-sm font-medium transition active:scale-95"><i class="ph ph-clipboard-text"></i> Cek Lapangan</button>
-                <button onclick="nav('dash')" id="btnNavDash" class="whitespace-nowrap px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium transition active:scale-95"><i class="ph ph-chart-pie-slice"></i> Dashboard</button>
+                <button onclick="nav('master')" id="btnNavMaster" class="btn-interactive whitespace-nowrap px-4 py-2 rounded-lg bg-gray-800 text-gray-300 text-sm font-medium flex items-center gap-2"><i data-lucide="archive" class="w-4 h-4"></i> Master Aset</button>
+                <button onclick="nav('cek')" id="btnNavCek" class="btn-interactive whitespace-nowrap px-4 py-2 rounded-lg bg-gray-800 text-gray-300 text-sm font-medium flex items-center gap-2"><i data-lucide="clipboard-check" class="w-4 h-4"></i> Cek Lapangan</button>
+                <button onclick="nav('dash')" id="btnNavDash" class="btn-interactive whitespace-nowrap px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium flex items-center gap-2 shadow-lg shadow-blue-900/20"><i data-lucide="layout-dashboard" class="w-4 h-4"></i> Dashboard</button>
             </div>
         </div>
     </nav>
 
-    <!-- Overlay Loader (Animasi Modern Baru) -->
-    <div id="loadingOverlay" class="fixed inset-0 bg-gray-950/90 z-[100] flex flex-col items-center justify-center backdrop-blur-md transition-all duration-300 opacity-0 pointer-events-none">
-        <div class="relative flex justify-center items-center mb-6">
-            <!-- Pinging background -->
-            <div class="absolute animate-ping w-16 h-16 rounded-full bg-blue-600/40"></div>
-            <!-- Outer spinning ring -->
-            <div class="absolute w-24 h-24 rounded-full border-t-2 border-l-2 border-transparent border-t-blue-500 animate-[spin_1.5s_linear_infinite]"></div>
-            <!-- Inner spinning ring (reverse) -->
-            <div class="absolute w-16 h-16 rounded-full border-r-2 border-b-2 border-transparent border-b-blue-400 animate-[spin_1s_linear_infinite_reverse]"></div>
-            <!-- Center Icon -->
-            <i class="ph-fill ph-database text-blue-500 text-3xl animate-pulse"></i>
-        </div>
-        <p class="text-white font-semibold tracking-widest uppercase text-sm" id="loadingText">Sinkronisasi data...</p>
-        <!-- Bouncing dots -->
-        <div class="flex gap-1.5 mt-4">
-            <div class="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 0s"></div>
-            <div class="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style="animation-delay: 0.15s"></div>
-            <div class="w-1.5 h-1.5 bg-blue-300 rounded-full animate-bounce" style="animation-delay: 0.3s"></div>
+    <!-- Global Fullscreen Loader -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-gray-950/80 z-[100] flex flex-col items-center justify-center backdrop-blur-md transition-all duration-300 opacity-0 pointer-events-none">
+        <div class="bg-gray-900 p-6 rounded-2xl border border-gray-800 shadow-2xl flex flex-col items-center">
+            <i data-lucide="loader-2" class="w-10 h-10 text-blue-500 animate-spin mb-4"></i>
+            <p class="text-white font-medium text-sm" id="loadingText">Memproses data...</p>
         </div>
     </div>
 
-    <!-- Toast Container (Notifikasi Animasi Baru) -->
-    <div id="toastContainer" class="fixed top-24 sm:top-5 right-5 z-[200] flex flex-col gap-3 pointer-events-none"></div>
+    <!-- Modern Toast Container -->
+    <div id="toastContainer" class="fixed top-20 sm:top-6 right-6 z-[200] flex flex-col gap-3 pointer-events-none"></div>
 
-    <main class="flex-grow max-w-5xl mx-auto w-full p-4 pb-20">
+    <main class="flex-grow max-w-5xl mx-auto w-full p-4 pb-20 overflow-x-hidden">
 
         <!-- ==================== VIEW 1: MASTER INPUT ==================== -->
-        <div id="viewMaster" class="hidden-view space-y-6">
+        <div id="viewMaster" class="hidden-view space-y-6 card-view">
             <div class="bg-gray-900 p-6 rounded-2xl border border-gray-800 shadow-sm">
-                <h2 class="text-lg font-bold text-white mb-1">Registrasi Aset Baru</h2>
-                <p class="text-sm text-gray-400 mb-6">Tambahkan aset baru ke dalam buku inventaris (Master Data).</p>
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="bg-blue-500/10 p-2 rounded-lg"><i data-lucide="archive-restore" class="w-6 h-6 text-blue-400"></i></div>
+                    <div>
+                        <h2 class="text-lg font-bold text-white leading-tight">Registrasi Aset Baru</h2>
+                        <p class="text-xs text-gray-400 mt-0.5">Tambahkan data ke master inventaris.</p>
+                    </div>
+                </div>
                 
                 <form id="formMaster" class="space-y-5">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="md:col-span-2">
                             <label class="block text-xs text-gray-400 mb-1">Nama Aset / Spesifikasi</label>
-                            <input type="text" id="m_nama" required placeholder="Cth: Mesin Traktor Yanmar YZC" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none">
+                            <input type="text" id="m_nama" required placeholder="Cth: Mesin Traktor Yanmar YZC" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all">
                         </div>
                         <div>
                             <label class="block text-xs text-gray-400 mb-1">Kategori Jenis</label>
-                            <select id="m_jenis" required class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none appearance-none">
+                            <select id="m_jenis" required class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none appearance-none transition-all">
                                 <option value="" disabled selected>-- Pilih Kategori --</option>
                                 <option value="PRL">Peralatan (PRL)</option>
                                 <option value="MSN">Mesin (MSN)</option>
@@ -98,68 +134,69 @@
                         </div>
                         <div>
                             <label class="block text-xs text-gray-400 mb-1">Lokasi Aset Ditempatkan</label>
-                            <input type="text" id="m_lokasi" required placeholder="Cth: Gudang Pertanian" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none">
+                            <input type="text" id="m_lokasi" required placeholder="Cth: Gudang Pertanian" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all">
                         </div>
                         <div>
                             <label class="block text-xs text-gray-400 mb-1">Tanggal Perolehan</label>
-                            <input type="date" id="m_tanggal" required class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none">
+                            <input type="date" id="m_tanggal" required class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all">
                         </div>
                         <div>
-                            <label class="block text-xs text-gray-400 mb-1">Jumlah Unit (Auto Generate Kode)</label>
-                            <input type="number" id="m_jumlah" required min="1" value="1" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none">
+                            <label class="block text-xs text-gray-400 mb-1">Jumlah Unit (Generate Kode)</label>
+                            <input type="number" id="m_jumlah" required min="1" value="1" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all">
                         </div>
                     </div>
-                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl font-semibold transition active:scale-95 flex justify-center items-center gap-2">
-                        <i class="ph-fill ph-plus-circle"></i> Simpan ke Master Data
+                    <button type="submit" id="btnSubmitMaster" class="btn-interactive w-full bg-blue-600 hover:bg-blue-500 text-white py-3.5 rounded-xl font-semibold flex justify-center items-center gap-2 mt-4 shadow-lg shadow-blue-900/20">
+                        <i data-lucide="save" class="w-5 h-5"></i> Simpan ke Master Data
                     </button>
                 </form>
             </div>
         </div>
 
         <!-- ==================== VIEW 2: FORM CEK ASET ==================== -->
-        <div id="viewCek" class="hidden-view space-y-6">
+        <div id="viewCek" class="hidden-view space-y-6 card-view">
             <form id="formCek" class="space-y-6">
-                <!-- Data Master Section -->
+                <!-- Identifikasi Section -->
                 <div class="bg-gray-900 p-5 rounded-2xl border border-gray-800 shadow-sm relative overflow-hidden">
                     <div class="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
-                    <h2 class="text-sm font-semibold text-blue-400 uppercase tracking-wider mb-4"><i class="ph ph-scan"></i> Identifikasi Aset</h2>
+                    <h2 class="text-xs font-bold text-blue-500 uppercase tracking-widest mb-5 flex items-center gap-2"><i data-lucide="scan-line" class="w-4 h-4"></i> Identifikasi Aset</h2>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-xs text-gray-400 mb-1">Tanggal Pengecekan</label>
-                            <input type="date" id="c_tanggal" required class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white outline-none">
+                            <input type="date" id="c_tanggal" required class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500">
                         </div>
                         <div>
                             <label class="block text-xs text-gray-400 mb-1">Nama Petugas</label>
-                            <input type="text" id="c_petugas" required placeholder="Nama Pemeriksa" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white outline-none">
+                            <input type="text" id="c_petugas" required placeholder="Nama Pemeriksa" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500">
                         </div>
                         <div class="md:col-span-2 relative">
                             <label class="block text-xs text-blue-400 mb-1 font-semibold">Cari & Pilih Kode Aset</label>
-                            <input type="text" id="c_kodeAset" list="listKode" autocomplete="off" required placeholder="Ketik kode aset atau nama..." class="w-full bg-gray-800 border-2 border-blue-900/50 rounded-xl pl-10 pr-4 py-3 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition">
-                            <i class="ph ph-magnifying-glass absolute left-3 bottom-3.5 text-gray-400 text-lg"></i>
+                            <div class="relative">
+                                <i data-lucide="search" class="absolute left-4 top-3.5 text-gray-400 w-5 h-5"></i>
+                                <input type="text" id="c_kodeAset" list="listKode" autocomplete="off" required placeholder="Ketik kode atau nama..." class="w-full bg-gray-800 border border-blue-900/50 rounded-xl pl-12 pr-4 py-3.5 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all shadow-inner">
+                            </div>
                             <datalist id="listKode"></datalist>
                         </div>
                     </div>
 
-                    <!-- Auto-filled info -->
-                    <div id="c_infoBox" class="mt-4 p-4 bg-gray-850 rounded-xl border border-gray-700/50 hidden">
-                        <div class="text-xs text-gray-500 mb-1">Detail Buku Inventaris:</div>
+                    <!-- Auto-filled info card -->
+                    <div id="c_infoBox" class="mt-4 p-4 bg-gray-850 rounded-xl border border-gray-700/50 hidden animate-fade-slide-up">
+                        <div class="text-[11px] uppercase tracking-wider text-gray-500 mb-1.5 font-semibold">Buku Inventaris</div>
                         <div id="c_lblNama" class="text-lg font-bold text-white leading-tight"></div>
-                        <div class="flex items-center gap-4 mt-2">
-                            <div class="text-sm text-gray-400 flex items-center gap-1"><i class="ph ph-map-pin"></i> <span id="c_lblLokasi"></span></div>
-                            <div class="text-sm text-gray-400 flex items-center gap-1"><i class="ph ph-tag"></i> <span id="c_lblJenis"></span></div>
+                        <div class="flex items-center gap-5 mt-3">
+                            <div class="text-sm text-gray-400 flex items-center gap-1.5"><i data-lucide="map-pin" class="w-4 h-4"></i> <span id="c_lblLokasi"></span></div>
+                            <div class="text-sm text-gray-400 flex items-center gap-1.5"><i data-lucide="tag" class="w-4 h-4"></i> <span id="c_lblJenis"></span></div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Evaluasi -->
                 <div class="bg-gray-900 p-5 rounded-2xl border border-gray-800 shadow-sm">
-                    <h2 class="text-sm font-semibold text-blue-400 uppercase tracking-wider mb-4"><i class="ph ph-clipboard-text"></i> Hasil Evaluasi Fisik</h2>
-                    
+                    <h2 class="text-xs font-bold text-blue-500 uppercase tracking-widest mb-5 flex items-center gap-2"><i data-lucide="activity" class="w-4 h-4"></i> Evaluasi Fisik</h2>
                     <div class="space-y-6">
                         <div>
                             <label class="block text-xs text-gray-400 mb-2">1. Kondisi Aktual</label>
-                            <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                                 <div class="radio-card"><input type="radio" name="kondisi" id="k_baik" value="Baik" required><label for="k_baik">Baik</label></div>
                                 <div class="radio-card"><input type="radio" name="kondisi" id="k_rr" value="Rusak Ringan"><label for="k_rr">Rusak Ringan</label></div>
                                 <div class="radio-card"><input type="radio" name="kondisi" id="k_rb" value="Rusak Berat"><label for="k_rb">Rusak Berat</label></div>
@@ -169,14 +206,14 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label class="block text-xs text-gray-400 mb-2">2. Status Penggunaan</label>
-                                <div class="grid grid-cols-2 gap-2">
+                                <div class="grid grid-cols-2 gap-3">
                                     <div class="radio-card"><input type="radio" name="status" id="s_pakai" value="Digunakan" required><label for="s_pakai">Digunakan</label></div>
                                     <div class="radio-card"><input type="radio" name="status" id="s_nganggur" value="Tidak Digunakan"><label for="s_nganggur">Tidak Digunakan</label></div>
                                 </div>
                             </div>
                             <div>
                                 <label class="block text-xs text-gray-400 mb-2">3. Kesesuaian Fisik & Buku</label>
-                                <div class="grid grid-cols-2 gap-2">
+                                <div class="grid grid-cols-2 gap-3">
                                     <div class="radio-card"><input type="radio" name="sesuai" id="ss_ya" value="Sesuai" required><label for="ss_ya">Sesuai</label></div>
                                     <div class="radio-card"><input type="radio" name="sesuai" id="ss_tdk" value="Tidak Sesuai"><label for="ss_tdk">Tidak Sesuai</label></div>
                                 </div>
@@ -184,7 +221,7 @@
                         </div>
                         <div>
                             <label class="block text-xs text-gray-400 mb-2">4. Rekomendasi Tindak Lanjut</label>
-                            <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                                 <div class="radio-card"><input type="radio" name="tindakLanjut" id="tl_tidak" value="Tidak Perlu" required><label for="tl_tidak">Tidak Perlu</label></div>
                                 <div class="radio-card"><input type="radio" name="tindakLanjut" id="tl_perbaikan" value="Perbaikan"><label for="tl_perbaikan">Perbaikan</label></div>
                                 <div class="radio-card"><input type="radio" name="tindakLanjut" id="tl_ganti" value="Penggantian"><label for="tl_ganti">Penggantian</label></div>
@@ -196,52 +233,65 @@
 
                 <!-- Foto & Catatan -->
                 <div class="bg-gray-900 p-5 rounded-2xl border border-gray-800 shadow-sm">
-                    <h2 class="text-sm font-semibold text-blue-400 uppercase tracking-wider mb-4"><i class="ph ph-camera"></i> Dokumentasi Lapangan</h2>
+                    <h2 class="text-xs font-bold text-blue-500 uppercase tracking-widest mb-5 flex items-center gap-2"><i data-lucide="camera" class="w-4 h-4"></i> Dokumentasi Lapangan</h2>
                     <div class="mb-5">
-                        <label for="c_foto" class="w-full flex flex-col items-center p-6 border-2 border-dashed border-gray-700 rounded-xl cursor-pointer hover:bg-gray-800 transition">
-                            <i class="ph ph-camera-plus text-3xl text-gray-500 mb-2"></i>
-                            <span class="text-sm text-gray-400">Jepret atau Pilih Foto (Bisa >1)</span>
+                        <label for="c_foto" class="w-full flex flex-col items-center justify-center p-8 border-2 border-dashed border-gray-700 rounded-xl cursor-pointer hover:bg-gray-800 transition-colors group">
+                            <div class="bg-gray-800 p-3 rounded-full mb-3 group-hover:bg-gray-700 transition">
+                                <i data-lucide="upload-cloud" class="w-6 h-6 text-gray-400 group-hover:text-blue-400"></i>
+                            </div>
+                            <span class="text-sm font-medium text-gray-300">Ambil / Pilih Foto</span>
+                            <span class="text-xs text-gray-500 mt-1">Mendukung unggahan multi-file</span>
                             <input type="file" id="c_foto" accept="image/*" capture="environment" multiple class="hidden" onchange="processImages(event)">
                         </label>
                         <div id="c_previewContainer" class="hidden flex flex-wrap gap-3 mt-4"></div>
                     </div>
                     <div>
-                        <label class="block text-xs text-gray-400 mb-1">Catatan Kejadian Khusus (Opsional)</label>
-                        <textarea id="c_catatan" rows="2" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white outline-none resize-none"></textarea>
+                        <label class="block text-xs text-gray-400 mb-1">Catatan Khusus (Opsional)</label>
+                        <textarea id="c_catatan" rows="3" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white outline-none resize-none focus:border-blue-500"></textarea>
                     </div>
                 </div>
 
-                <div class="flex gap-3">
-                    <button type="submit" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-4 rounded-xl font-semibold transition active:scale-95"><i class="ph-fill ph-check-circle"></i> Simpan Pengecekan</button>
-                    <button type="button" onclick="resetCekForm()" class="px-6 bg-gray-800 hover:bg-gray-700 text-gray-300 py-4 rounded-xl font-semibold transition">Reset</button>
+                <div class="flex flex-col sm:flex-row gap-3 pt-2">
+                    <button type="submit" id="btnSubmitCek" class="btn-interactive flex-1 bg-green-600 hover:bg-green-500 text-white py-3.5 rounded-xl font-semibold flex justify-center items-center gap-2 shadow-lg shadow-green-900/20">
+                        <i data-lucide="check-circle" class="w-5 h-5"></i> Simpan Pengecekan
+                    </button>
+                    <button type="button" onclick="resetCekForm()" class="btn-interactive px-6 bg-gray-800 hover:bg-gray-700 text-gray-300 py-3.5 rounded-xl font-semibold flex justify-center items-center gap-2">
+                        <i data-lucide="rotate-ccw" class="w-4 h-4"></i> Reset
+                    </button>
                 </div>
             </form>
         </div>
 
         <!-- ==================== VIEW 3: DASHBOARD ==================== -->
-        <div id="viewDash" class="space-y-6">
+        <div id="viewDash" class="space-y-6 card-view">
             
             <!-- Tab Menu -->
-            <div class="flex gap-2 p-1 bg-gray-900 border border-gray-800 rounded-xl w-full sm:w-max">
-                <button onclick="switchDashTab('master')" id="tabMaster" class="flex-1 sm:w-40 py-2 text-sm font-medium rounded-lg bg-gray-800 text-white transition">Data Master</button>
-                <button onclick="switchDashTab('cek')" id="tabCek" class="flex-1 sm:w-40 py-2 text-sm font-medium rounded-lg text-gray-400 hover:text-gray-200 transition">Data Pengecekan</button>
+            <div class="flex p-1 bg-gray-900 border border-gray-800 rounded-xl w-full sm:w-max mx-auto sm:mx-0 shadow-sm">
+                <button onclick="switchDashTab('master')" id="tabMaster" class="flex-1 sm:w-44 py-2.5 text-sm font-semibold rounded-lg bg-gray-800 text-white transition-all shadow-sm">Data Master</button>
+                <button onclick="switchDashTab('cek')" id="tabCek" class="flex-1 sm:w-44 py-2.5 text-sm font-semibold rounded-lg text-gray-500 hover:text-gray-300 transition-all">Riwayat Cek</button>
             </div>
 
             <!-- Panel Master Data -->
-            <div id="panelMaster" class="bg-gray-900 rounded-2xl border border-gray-800 shadow-sm overflow-hidden">
-                <div class="p-4 border-b border-gray-800 flex flex-col sm:flex-row justify-between gap-3">
-                    <h3 class="font-bold text-white self-center hidden sm:block">Daftar Inventaris</h3>
-                    <div class="flex gap-2">
-                        <input type="text" id="searchMaster" placeholder="Cari master aset..." class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-1 focus:ring-blue-500 outline-none w-full sm:w-64">
-                        <button onclick="loadData()" class="bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-2 rounded-lg transition" title="Refresh"><i class="ph ph-arrows-clockwise text-lg"></i></button>
+            <div id="panelMaster" class="bg-gray-900 rounded-2xl border border-gray-800 shadow-sm overflow-hidden animate-fade-slide-up">
+                <div class="p-4 sm:p-5 border-b border-gray-800 flex flex-col sm:flex-row justify-between gap-4">
+                    <div class="flex items-center gap-3 hidden sm:flex">
+                        <div class="bg-gray-800 p-2 rounded-lg"><i data-lucide="boxes" class="w-5 h-5 text-gray-400"></i></div>
+                        <h3 class="font-bold text-white">Daftar Inventaris</h3>
+                    </div>
+                    <div class="flex gap-2 w-full sm:w-auto relative">
+                        <i data-lucide="search" class="absolute left-3 top-3 w-4 h-4 text-gray-500"></i>
+                        <input type="text" id="searchMaster" placeholder="Cari master aset..." class="bg-gray-800 border border-gray-700 rounded-lg pl-9 pr-3 py-2 text-sm text-white focus:ring-1 focus:ring-blue-500 outline-none w-full sm:w-64 transition">
+                        <button onclick="loadData()" class="btn-interactive bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-2 rounded-lg border border-gray-700" title="Refresh">
+                            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                        </button>
                     </div>
                 </div>
-                <div class="overflow-x-auto">
+                <div class="overflow-x-auto min-h-[250px]">
                     <table class="w-full text-left whitespace-nowrap">
-                        <thead class="bg-gray-850 text-gray-400 text-xs uppercase tracking-wider">
+                        <thead class="bg-gray-850/50 text-gray-400 text-xs font-semibold uppercase tracking-wider border-b border-gray-800">
                             <tr><th class="p-4">Kode Aset</th><th class="p-4">Nama Aset</th><th class="p-4">Kategori</th><th class="p-4">Lokasi</th><th class="p-4">Tgl Beli</th><th class="p-4 text-center">Aksi</th></tr>
                         </thead>
-                        <tbody id="tbodyMaster" class="text-sm divide-y divide-gray-800">
+                        <tbody id="tbodyMaster" class="text-sm divide-y divide-gray-800/50">
                             <!-- Injected -->
                         </tbody>
                     </table>
@@ -249,20 +299,26 @@
             </div>
 
             <!-- Panel Data Cek -->
-            <div id="panelCek" class="hidden-view bg-gray-900 rounded-2xl border border-gray-800 shadow-sm overflow-hidden">
-                <div class="p-4 border-b border-gray-800 flex flex-col sm:flex-row justify-between gap-3">
-                    <h3 class="font-bold text-white self-center hidden sm:block">Riwayat Pengecekan</h3>
-                    <div class="flex gap-2">
-                        <input type="text" id="searchCek" placeholder="Filter kode, nama, kondisi..." class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-1 focus:ring-blue-500 outline-none w-full sm:w-64">
-                        <button onclick="loadData()" class="bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-2 rounded-lg transition" title="Refresh"><i class="ph ph-arrows-clockwise text-lg"></i></button>
+            <div id="panelCek" class="hidden-view bg-gray-900 rounded-2xl border border-gray-800 shadow-sm overflow-hidden animate-fade-slide-up">
+                <div class="p-4 sm:p-5 border-b border-gray-800 flex flex-col sm:flex-row justify-between gap-4">
+                    <div class="flex items-center gap-3 hidden sm:flex">
+                        <div class="bg-gray-800 p-2 rounded-lg"><i data-lucide="history" class="w-5 h-5 text-gray-400"></i></div>
+                        <h3 class="font-bold text-white">Riwayat Pengecekan</h3>
+                    </div>
+                    <div class="flex gap-2 w-full sm:w-auto relative">
+                        <i data-lucide="search" class="absolute left-3 top-3 w-4 h-4 text-gray-500"></i>
+                        <input type="text" id="searchCek" placeholder="Filter kode, nama..." class="bg-gray-800 border border-gray-700 rounded-lg pl-9 pr-3 py-2 text-sm text-white focus:ring-1 focus:ring-blue-500 outline-none w-full sm:w-64 transition">
+                        <button onclick="loadData()" class="btn-interactive bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-2 rounded-lg border border-gray-700" title="Refresh">
+                            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                        </button>
                     </div>
                 </div>
-                <div class="overflow-x-auto">
+                <div class="overflow-x-auto min-h-[250px]">
                     <table class="w-full text-left whitespace-nowrap">
-                        <thead class="bg-gray-850 text-gray-400 text-xs uppercase tracking-wider">
+                        <thead class="bg-gray-850/50 text-gray-400 text-xs font-semibold uppercase tracking-wider border-b border-gray-800">
                             <tr><th class="p-4">Tanggal & Petugas</th><th class="p-4">Kode & Aset</th><th class="p-4">Kondisi</th><th class="p-4 text-center">Foto</th><th class="p-4 text-center">Export / Aksi</th></tr>
                         </thead>
-                        <tbody id="tbodyCek" class="text-sm divide-y divide-gray-800">
+                        <tbody id="tbodyCek" class="text-sm divide-y divide-gray-800/50">
                             <!-- Injected -->
                         </tbody>
                     </table>
@@ -303,7 +359,7 @@
 
     <script>
         // ==========================================
-        // GANTI URL INI SETELAH DEPLOY APPS SCRIPT!
+        // KONFIGURASI API
         // ==========================================
         const API_URL = "https://script.google.com/macros/s/AKfycbz_Q5YI-xXZ2gwS_vs0CAC8KiloAw4TKjik-vflTb3u3T_WihdUUxQduKJ_6z-KGi1riw/exec"; 
         
@@ -313,9 +369,11 @@
 
         // INIT
         document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons(); // Initialize Icons
             document.getElementById('m_tanggal').valueAsDate = new Date();
             document.getElementById('c_tanggal').valueAsDate = new Date();
             nav('dash'); // Default view
+            
             if(API_URL !== "URL_APPS_SCRIPT_ANDA_DISINI") loadData();
 
             // Setup Search Listeners
@@ -325,7 +383,7 @@
             // Setup Auto-fill Kode Aset saat Cek Lapangan
             const inputCekKode = document.getElementById('c_kodeAset');
             inputCekKode.addEventListener('input', (e) => {
-                const val = e.target.value.split(" - ")[0].trim(); // Extract ID if they pick from list
+                const val = e.target.value.split(" - ")[0].trim();
                 const asset = dbMaster.find(a => a['Kode Aset'] === val);
                 const infoBox = document.getElementById('c_infoBox');
                 
@@ -342,52 +400,83 @@
             });
         });
 
-        // ================= LOADER & TOAST =================
-        function showLoad(show, txt="Loading...") {
+        // ================= UI FEEDBACK & LOADERS =================
+        function showGlobalLoad(show, txt="Memproses data...") {
             const overlay = document.getElementById('loadingOverlay');
             document.getElementById('loadingText').innerText = txt;
-            if(show) {
-                overlay.classList.remove('opacity-0', 'pointer-events-none');
+            if(show) overlay.classList.remove('opacity-0', 'pointer-events-none');
+            else overlay.classList.add('opacity-0', 'pointer-events-none');
+        }
+
+        function setBtnLoading(btnId, isLoading, originalHtml, loadingText) {
+            const btn = document.getElementById(btnId);
+            if(isLoading) {
+                btn.disabled = true;
+                btn.classList.add('opacity-80', 'cursor-not-allowed', 'scale-95');
+                btn.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> ${loadingText}`;
             } else {
-                overlay.classList.add('opacity-0', 'pointer-events-none');
+                btn.disabled = false;
+                btn.classList.remove('opacity-80', 'cursor-not-allowed', 'scale-95');
+                btn.innerHTML = originalHtml;
             }
+            lucide.createIcons();
         }
 
         function showToast(msg, type = 'success') {
             const container = document.getElementById('toastContainer');
             const toast = document.createElement('div');
-            const bgColor = type === 'success' ? 'bg-green-600' : (type === 'error' ? 'bg-red-600' : 'bg-blue-600');
-            const icon = type === 'success' ? 'ph-check-circle' : (type === 'error' ? 'ph-warning-circle' : 'ph-info');
+            const bgConfig = type === 'success' ? 'bg-gray-800 border-green-500' : (type === 'error' ? 'bg-gray-800 border-red-500' : 'bg-gray-800 border-blue-500');
+            const iconConfig = type === 'success' ? 'check-circle text-green-400' : (type === 'error' ? 'alert-triangle text-red-400' : 'info text-blue-400');
             
-            toast.className = `flex items-center gap-3 px-4 py-3 rounded-xl text-white shadow-xl transform transition-all duration-300 translate-x-full opacity-0 ${bgColor}`;
-            toast.innerHTML = `<i class="ph-fill ${icon} text-2xl"></i><span class="text-sm font-medium">${msg}</span>`;
+            toast.className = `flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl border-l-4 transform transition-all duration-300 translate-x-full opacity-0 ${bgConfig}`;
+            toast.innerHTML = `<i data-lucide="${iconConfig.split(' ')[0]}" class="w-5 h-5 ${iconConfig.split(' ')[1]}"></i><span class="text-sm font-medium text-white">${msg}</span>`;
             
             container.appendChild(toast);
+            lucide.createIcons();
             
-            // Animasi masuk
+            // Masuk
             setTimeout(() => toast.classList.remove('translate-x-full', 'opacity-0'), 10);
-            
-            // Animasi keluar
+            // Keluar
             setTimeout(() => {
                 toast.classList.add('translate-x-full', 'opacity-0');
                 setTimeout(() => toast.remove(), 300);
             }, 3000);
         }
 
+        function renderSkeleton(tbodyId, cols) {
+            const tbody = document.getElementById(tbodyId);
+            let html = '';
+            for(let i=0; i<5; i++) {
+                html += `<tr class="border-b border-gray-800/30">`;
+                for(let j=0; j<cols; j++) {
+                    html += `<td class="p-4"><div class="skeleton-box h-5 w-full rounded"></div></td>`;
+                }
+                html += `</tr>`;
+            }
+            tbody.innerHTML = html;
+        }
+
         // ================= ROUTER / NAVIGASI =================
         function nav(target) {
             ['Master', 'Cek', 'Dash'].forEach(v => {
-                document.getElementById('view' + v).classList.add('hidden-view');
+                const view = document.getElementById('view' + v);
+                view.classList.add('hidden-view');
+                view.classList.remove('card-view'); // Reset animation
+                
                 let btn = document.getElementById('btnNav' + v);
-                btn.className = "whitespace-nowrap px-4 py-2 rounded-lg text-sm font-medium transition active:scale-95 bg-gray-800 text-gray-300 hover:bg-gray-700";
+                btn.className = "btn-interactive whitespace-nowrap px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all bg-gray-800 text-gray-400 hover:text-gray-200";
             });
-            document.getElementById('view' + target.charAt(0).toUpperCase() + target.slice(1)).classList.remove('hidden-view');
+            
+            const targetView = document.getElementById('view' + target.charAt(0).toUpperCase() + target.slice(1));
+            targetView.classList.remove('hidden-view');
+            // Trigger reflow for animation restart
+            void targetView.offsetWidth; 
+            targetView.classList.add('card-view');
             
             let activeBtn = document.getElementById('btnNav' + target.charAt(0).toUpperCase() + target.slice(1));
-            activeBtn.className = "whitespace-nowrap px-4 py-2 rounded-lg text-sm font-medium transition active:scale-95 bg-blue-600 text-white";
+            activeBtn.className = "btn-interactive whitespace-nowrap px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all bg-blue-600 text-white shadow-lg shadow-blue-900/20";
 
             if (target === 'cek' && dbMaster.length > 0) {
-                // Populate Datalist
                 const dlist = document.getElementById('listKode');
                 dlist.innerHTML = '';
                 dbMaster.forEach(a => {
@@ -402,8 +491,14 @@
             document.getElementById('panelMaster').classList.toggle('hidden-view', tab !== 'master');
             document.getElementById('panelCek').classList.toggle('hidden-view', tab !== 'cek');
             
-            const activeCls = "flex-1 sm:w-40 py-2 text-sm font-medium rounded-lg bg-gray-800 text-white transition";
-            const inactCls = "flex-1 sm:w-40 py-2 text-sm font-medium rounded-lg text-gray-400 hover:text-gray-200 transition";
+            // Re-trigger animation
+            const activePanel = document.getElementById(tab === 'master' ? 'panelMaster' : 'panelCek');
+            activePanel.classList.remove('animate-fade-slide-up');
+            void activePanel.offsetWidth;
+            activePanel.classList.add('animate-fade-slide-up');
+            
+            const activeCls = "flex-1 sm:w-44 py-2.5 text-sm font-semibold rounded-lg bg-gray-800 text-white transition-all shadow-sm";
+            const inactCls = "flex-1 sm:w-44 py-2.5 text-sm font-semibold rounded-lg text-gray-500 hover:text-gray-300 transition-all";
             
             document.getElementById('tabMaster').className = tab === 'master' ? activeCls : inactCls;
             document.getElementById('tabCek').className = tab === 'cek' ? activeCls : inactCls;
@@ -411,7 +506,7 @@
 
         // ================= API FETCH =================
         async function fetchAPI(payload) {
-            if(API_URL === "URL_APPS_SCRIPT_ANDA_DISINI") { showToast("Set API URL di kode HTML terlebih dahulu!", "error"); return null; }
+            if(API_URL === "URL_APPS_SCRIPT_ANDA_DISINI") { showToast("Set API URL di kode HTML!", "error"); return null; }
             try {
                 const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
                 const text = await res.text();
@@ -419,14 +514,18 @@
                 if(json.status !== 'success') throw new Error(json.message);
                 return json;
             } catch(e) {
-                showToast("Gagal koneksi server: " + e.message, "error");
+                showToast("Koneksi gagal: " + e.message, "error");
                 return null;
             }
         }
 
         async function loadData() {
             if(API_URL === "URL_APPS_SCRIPT_ANDA_DISINI") return;
-            showLoad(true, "Mengambil database...");
+            
+            // Tampilkan Skeleton Shimmer di tabel saat loading data
+            renderSkeleton('tbodyMaster', 6);
+            renderSkeleton('tbodyCek', 5);
+
             try {
                 const res = await fetch(API_URL + "?type=all");
                 const json = await res.json();
@@ -436,13 +535,19 @@
                     renderMaster();
                     renderCek();
                 }
-            } catch(e) { console.error(e); }
-            showLoad(false);
+            } catch(e) { 
+                console.error(e); 
+                document.getElementById('tbodyMaster').innerHTML = `<tr><td colspan="6" class="p-8 text-center text-red-400">Gagal memuat data</td></tr>`;
+                document.getElementById('tbodyCek').innerHTML = `<tr><td colspan="5" class="p-8 text-center text-red-400">Gagal memuat data</td></tr>`;
+            }
         }
 
         // ================= MASTER LOGIC =================
         document.getElementById('formMaster').addEventListener('submit', async(e) => {
             e.preventDefault();
+            const btnId = 'btnSubmitMaster';
+            const originalBtn = document.getElementById(btnId).innerHTML;
+            
             const payload = {
                 action: 'create_master',
                 namaAset: document.getElementById('m_nama').value,
@@ -451,15 +556,17 @@
                 tanggal: document.getElementById('m_tanggal').value,
                 jumlah: document.getElementById('m_jumlah').value
             };
-            showLoad(true, "Menyimpan & Generate Kode...");
+            
+            setBtnLoading(btnId, true, originalBtn, "Menyimpan...");
             const result = await fetchAPI(payload);
+            
             if(result) {
-                showToast(`Berhasil menyimpan ${payload.jumlah} aset ke Data Master!`, 'success');
+                showToast(`Tersimpan! ${payload.jumlah} aset di Master.`, 'success');
                 document.getElementById('formMaster').reset();
                 document.getElementById('m_tanggal').valueAsDate = new Date();
-                loadData();
+                loadData(); // reload dashboard
             }
-            showLoad(false);
+            setBtnLoading(btnId, false, originalBtn, "");
         });
 
         function renderMaster() {
@@ -468,17 +575,18 @@
             const filtered = dbMaster.filter(x => x['Nama Aset'].toLowerCase().includes(term) || x['Kode Aset'].toLowerCase().includes(term));
             
             tbody.innerHTML = filtered.map(item => `
-                <tr>
-                    <td class="p-4 font-mono text-blue-400 font-medium">${item['Kode Aset']}</td>
+                <tr class="hover:bg-gray-800/40 transition-colors group">
+                    <td class="p-4 font-mono text-blue-400 font-medium text-[13px]">${item['Kode Aset']}</td>
                     <td class="p-4 text-white font-medium">${item['Nama Aset']}</td>
-                    <td class="p-4"><span class="px-2 py-1 bg-gray-800 rounded text-xs text-gray-300">${item['Jenis']}</span></td>
+                    <td class="p-4"><span class="px-2.5 py-1 bg-gray-800 border border-gray-700 rounded-md text-[11px] font-semibold text-gray-300 tracking-wide">${item['Jenis']}</span></td>
                     <td class="p-4 text-gray-400">${item['Lokasi']}</td>
                     <td class="p-4 text-gray-400">${new Date(item['Tanggal Perolehan']).toLocaleDateString('id-ID')}</td>
                     <td class="p-4 text-center">
-                        <button onclick="delData('master', ${item.rowIndex})" class="p-1.5 bg-gray-800 rounded text-red-400 hover:bg-gray-700" title="Hapus"><i class="ph ph-trash"></i></button>
+                        <button onclick="delData('master', ${item.rowIndex})" class="p-2 bg-gray-800 border border-gray-700 rounded-lg text-gray-400 hover:text-red-400 hover:border-red-900 transition-all opacity-50 group-hover:opacity-100" title="Hapus Data"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                     </td>
                 </tr>
-            `).join('') || `<tr><td colspan="6" class="p-8 text-center text-gray-500">Data Master kosong.</td></tr>`;
+            `).join('') || `<tr><td colspan="6" class="p-12 text-center text-gray-500"><i data-lucide="inbox" class="w-10 h-10 mx-auto mb-3 opacity-50"></i>Belum ada data Master.</td></tr>`;
+            lucide.createIcons();
         }
 
         // ================= CEK LOGIC =================
@@ -509,12 +617,13 @@
         function renderPhotos() {
             const c = document.getElementById('c_previewContainer');
             c.innerHTML = uploadedPhotos.map((b, i) => `
-                <div class="relative w-16 h-16 rounded overflow-hidden border border-gray-600">
-                    <img src="${b}" class="w-full h-full object-cover">
-                    <button type="button" onclick="uploadedPhotos.splice(${i},1); renderPhotos()" class="absolute top-0 right-0 bg-red-500 text-white rounded-bl p-0.5"><i class="ph ph-x text-xs"></i></button>
+                <div class="relative w-16 h-16 rounded-lg overflow-hidden border border-gray-700 shadow-sm group">
+                    <img src="${b}" class="w-full h-full object-cover group-hover:scale-110 transition duration-300">
+                    <button type="button" onclick="uploadedPhotos.splice(${i},1); renderPhotos()" class="absolute top-1 right-1 bg-red-500/90 text-white rounded-md p-1 hover:bg-red-600 transition backdrop-blur"><i data-lucide="x" class="w-3 h-3"></i></button>
                 </div>
             `).join('');
             if(!uploadedPhotos.length) c.classList.add('hidden');
+            lucide.createIcons();
         }
 
         function resetCekForm() {
@@ -526,6 +635,9 @@
 
         document.getElementById('formCek').addEventListener('submit', async(e) => {
             e.preventDefault();
+            const btnId = 'btnSubmitCek';
+            const originalBtn = document.getElementById(btnId).innerHTML;
+            
             const getR = n => (document.querySelector(`input[name="${n}"]:checked`)||{}).value || '';
             const fullKode = document.getElementById('c_kodeAset').value;
             const pureKode = fullKode.split(" - ")[0].trim();
@@ -544,14 +656,15 @@
                 fotoBase64: uploadedPhotos
             };
             
-            showLoad(true, "Menyimpan Pengecekan...");
+            setBtnLoading(btnId, true, originalBtn, "Mengirim...");
             const res = await fetchAPI(payload);
+            
             if(res) {
-                showToast("Pengecekan lapangan berhasil disimpan!", "success");
+                showToast("Pengecekan berhasil disimpan!", "success");
                 resetCekForm();
-                loadData();
+                loadData(); // reload dashboard
             }
-            showLoad(false);
+            setBtnLoading(btnId, false, originalBtn, "");
         });
 
         function renderCek() {
@@ -560,42 +673,45 @@
             const filtered = dbCek.filter(x => x['Nama Aset'].toLowerCase().includes(term) || x['Kode Aset'].toLowerCase().includes(term) || x['Kondisi'].toLowerCase().includes(term));
             
             tbody.innerHTML = filtered.map(item => {
-                let color = item.Kondisi==='Baik' ? 'text-green-400' : (item.Kondisi==='Rusak Berat' || item.Kondisi==='Tidak Ditemukan' ? 'text-red-400' : 'text-yellow-400');
-                let fotosHtml = (item['Foto URL']||'').split(',').filter(u=>u.trim()).map(u => `<a href="${u.trim()}" target="_blank" class="text-blue-400 text-lg hover:text-blue-300"><i class="ph-fill ph-image"></i></a>`).join(' ');
+                let color = item.Kondisi==='Baik' ? 'text-green-400 bg-green-500/10 border-green-500/20' : 
+                           (item.Kondisi==='Rusak Berat' || item.Kondisi==='Tidak Ditemukan' ? 'text-red-400 bg-red-500/10 border-red-500/20' : 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20');
                 
-                return `<tr>
+                let fotosHtml = (item['Foto URL']||'').split(',').filter(u=>u.trim()).map(u => `<a href="${u.trim()}" target="_blank" class="inline-block p-1.5 bg-gray-800 border border-gray-700 rounded-md text-blue-400 hover:bg-gray-700 transition" title="Lihat Foto"><i data-lucide="image" class="w-4 h-4"></i></a>`).join(' ');
+                
+                return `<tr class="hover:bg-gray-800/40 transition-colors">
                     <td class="p-4">
-                        <div class="text-white">${new Date(item['Tanggal Cek']).toLocaleDateString('id-ID')}</div>
-                        <div class="text-xs text-gray-500"><i class="ph ph-user"></i> ${item.Petugas}</div>
+                        <div class="text-white font-medium mb-0.5">${new Date(item['Tanggal Cek']).toLocaleDateString('id-ID')}</div>
+                        <div class="text-[11px] text-gray-500 flex items-center gap-1 uppercase tracking-wide"><i data-lucide="user" class="w-3 h-3"></i> ${item.Petugas}</div>
                     </td>
                     <td class="p-4">
-                        <div class="font-mono text-blue-400 text-xs mb-0.5">${item['Kode Aset']}</div>
-                        <div class="text-white font-medium truncate max-w-[200px]">${item['Nama Aset']}</div>
+                        <div class="font-mono text-blue-400 text-xs mb-0.5 font-medium">${item['Kode Aset']}</div>
+                        <div class="text-white font-medium truncate max-w-[180px]">${item['Nama Aset']}</div>
                     </td>
-                    <td class="p-4 font-medium ${color}">${item.Kondisi}</td>
-                    <td class="p-4 text-center">${fotosHtml || '-'}</td>
-                    <td class="p-4 text-center">
-                        <div class="flex justify-center gap-1">
-                            <button onclick="exportDoc('PDF', ${item.rowIndex})" class="p-1.5 bg-red-900/40 text-red-400 rounded hover:bg-red-900/80" title="PDF"><i class="ph ph-file-pdf"></i></button>
-                            <button onclick="exportDoc('DOC', ${item.rowIndex})" class="p-1.5 bg-blue-900/40 text-blue-400 rounded hover:bg-blue-900/80" title="DOC"><i class="ph ph-file-doc"></i></button>
-                            <button onclick="delData('cek', ${item.rowIndex})" class="p-1.5 bg-gray-800 text-gray-400 rounded hover:text-red-400" title="Hapus"><i class="ph ph-trash"></i></button>
+                    <td class="p-4"><span class="px-2.5 py-1 border rounded-md text-[12px] font-semibold ${color}">${item.Kondisi}</span></td>
+                    <td class="p-4 text-center"><div class="flex items-center justify-center gap-1">${fotosHtml || '-'}</div></td>
+                    <td class="p-4">
+                        <div class="flex justify-center gap-1.5">
+                            <button onclick="exportDoc('PDF', ${item.rowIndex})" class="btn-interactive p-2 bg-red-900/20 border border-red-900/30 text-red-400 rounded-lg hover:bg-red-900/40" title="Export PDF"><i data-lucide="file-text" class="w-4 h-4"></i></button>
+                            <button onclick="exportDoc('DOC', ${item.rowIndex})" class="btn-interactive p-2 bg-blue-900/20 border border-blue-900/30 text-blue-400 rounded-lg hover:bg-blue-900/40" title="Export DOC"><i data-lucide="file" class="w-4 h-4"></i></button>
+                            <div class="w-px h-6 bg-gray-700 mx-1 self-center"></div>
+                            <button onclick="delData('cek', ${item.rowIndex})" class="btn-interactive p-2 bg-gray-800 border border-gray-700 text-gray-400 rounded-lg hover:text-red-400 hover:border-red-900" title="Hapus Riwayat"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                         </div>
                     </td>
                 </tr>`;
-            }).join('') || `<tr><td colspan="5" class="p-8 text-center text-gray-500">Data Cek kosong.</td></tr>`;
+            }).join('') || `<tr><td colspan="5" class="p-12 text-center text-gray-500"><i data-lucide="inbox" class="w-10 h-10 mx-auto mb-3 opacity-50"></i>Belum ada data Pengecekan.</td></tr>`;
+            lucide.createIcons();
         }
 
         // ================= GLOBAL =================
         async function delData(type, rowIndex) {
             if(!confirm("Yakin ingin menghapus baris data ini?")) return;
-            showLoad(true, "Menghapus data...");
+            showGlobalLoad(true, "Menghapus data...");
             const res = await fetchAPI({ action: 'delete', target: type, rowIndex: rowIndex });
             if(res) {
                 showToast("Data berhasil dihapus!", "success");
-                loadData(); // auto reloads ui
-            } else {
-                showLoad(false);
+                loadData(); // auto reloads ui & skeleton
             }
+            showGlobalLoad(false);
         }
 
         // ================= EXPORT =================
@@ -624,13 +740,12 @@
             if(data.Status && m[data.Status]) document.getElementById(m[data.Status]).innerText = '☑';
             if(data.Kesesuaian && m[data.Kesesuaian]) document.getElementById(m[data.Kesesuaian]).innerText = '☑';
             if(data['Tindak Lanjut'] && m[data['Tindak Lanjut']]) document.getElementById(m[data['Tindak Lanjut']]).innerText = '☑';
-            
             if(data['Foto URL']) document.getElementById('bx_foto_ya').innerText = '☑';
             else document.getElementById('bx_foto_tdk').innerText = '☑';
 
             const tpl = document.getElementById('exportTemplate');
             tpl.style.display = 'block';
-            showLoad(true, "Generating " + type);
+            showGlobalLoad(true, `Generate ${type} File...`);
 
             const fn = `CEK_${data['Kode Aset']}`;
             if(type === 'PDF') {
@@ -642,7 +757,8 @@
             }
             
             tpl.style.display = 'none';
-            showLoad(false);
+            showGlobalLoad(false);
+            showToast(`${type} berhasil diunduh!`, "success");
         }
     </script>
 </body>
