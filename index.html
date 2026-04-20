@@ -52,11 +52,14 @@
         </div>
     </nav>
 
-    <!-- Overlay Loader -->
-    <div id="loadingOverlay" class="fixed inset-0 bg-black/80 z-[100] hidden flex-col items-center justify-center backdrop-blur-sm">
+    <!-- Overlay Loader (Diperbarui dengan efek transisi) -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-black/80 z-[100] flex flex-col items-center justify-center backdrop-blur-sm transition-all duration-300 opacity-0 pointer-events-none">
         <div class="loader mb-4 w-12 h-12 border-4"></div>
         <p class="text-blue-400 font-medium animate-pulse" id="loadingText">Sinkronisasi data...</p>
     </div>
+
+    <!-- Toast Container (Notifikasi Animasi Baru) -->
+    <div id="toastContainer" class="fixed top-24 sm:top-5 right-5 z-[200] flex flex-col gap-3 pointer-events-none"></div>
 
     <main class="flex-grow max-w-5xl mx-auto w-full p-4 pb-20">
 
@@ -326,9 +329,36 @@
             });
         });
 
+        // ================= LOADER & TOAST =================
         function showLoad(show, txt="Loading...") {
+            const overlay = document.getElementById('loadingOverlay');
             document.getElementById('loadingText').innerText = txt;
-            document.getElementById('loadingOverlay').classList.toggle('hidden', !show);
+            if(show) {
+                overlay.classList.remove('opacity-0', 'pointer-events-none');
+            } else {
+                overlay.classList.add('opacity-0', 'pointer-events-none');
+            }
+        }
+
+        function showToast(msg, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const bgColor = type === 'success' ? 'bg-green-600' : (type === 'error' ? 'bg-red-600' : 'bg-blue-600');
+            const icon = type === 'success' ? 'ph-check-circle' : (type === 'error' ? 'ph-warning-circle' : 'ph-info');
+            
+            toast.className = `flex items-center gap-3 px-4 py-3 rounded-xl text-white shadow-xl transform transition-all duration-300 translate-x-full opacity-0 ${bgColor}`;
+            toast.innerHTML = `<i class="ph-fill ${icon} text-2xl"></i><span class="text-sm font-medium">${msg}</span>`;
+            
+            container.appendChild(toast);
+            
+            // Animasi masuk
+            setTimeout(() => toast.classList.remove('translate-x-full', 'opacity-0'), 10);
+            
+            // Animasi keluar
+            setTimeout(() => {
+                toast.classList.add('translate-x-full', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
         }
 
         // ================= ROUTER / NAVIGASI =================
@@ -368,7 +398,7 @@
 
         // ================= API FETCH =================
         async function fetchAPI(payload) {
-            if(API_URL === "URL_APPS_SCRIPT_ANDA_DISINI") { alert("Set API URL terlebih dahulu di kode HTML!"); return null; }
+            if(API_URL === "URL_APPS_SCRIPT_ANDA_DISINI") { showToast("Set API URL di kode HTML terlebih dahulu!", "error"); return null; }
             try {
                 const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
                 const text = await res.text();
@@ -376,7 +406,7 @@
                 if(json.status !== 'success') throw new Error(json.message);
                 return json;
             } catch(e) {
-                alert("Gagal koneksi server: " + e.message);
+                showToast("Gagal koneksi server: " + e.message, "error");
                 return null;
             }
         }
@@ -411,7 +441,7 @@
             showLoad(true, "Menyimpan & Generate Kode...");
             const result = await fetchAPI(payload);
             if(result) {
-                alert(`${result.message}\nKode digenerate:\n` + result.codes.join(", "));
+                showToast(`Berhasil menyimpan ${payload.jumlah} aset ke Data Master!`, 'success');
                 document.getElementById('formMaster').reset();
                 document.getElementById('m_tanggal').valueAsDate = new Date();
                 loadData();
@@ -504,7 +534,7 @@
             showLoad(true, "Menyimpan Pengecekan...");
             const res = await fetchAPI(payload);
             if(res) {
-                alert("Data cek berhasil disubmit.");
+                showToast("Pengecekan lapangan berhasil disimpan!", "success");
                 resetCekForm();
                 loadData();
             }
@@ -546,8 +576,13 @@
         async function delData(type, rowIndex) {
             if(!confirm("Yakin ingin menghapus baris data ini?")) return;
             showLoad(true, "Menghapus data...");
-            await fetchAPI({ action: 'delete', target: type, rowIndex: rowIndex });
-            loadData(); // auto reloads ui
+            const res = await fetchAPI({ action: 'delete', target: type, rowIndex: rowIndex });
+            if(res) {
+                showToast("Data berhasil dihapus!", "success");
+                loadData(); // auto reloads ui
+            } else {
+                showLoad(false);
+            }
         }
 
         // ================= EXPORT =================
