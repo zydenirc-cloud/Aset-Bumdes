@@ -477,16 +477,22 @@
                 return;
             }
 
+            // Fungsi pembantu agar tidak error "null" jika ada input radio yang terlewat
+            const getSafeRadioVal = (name) => {
+                const el = document.querySelector(`input[name="${name}"]:checked`);
+                return el ? el.value : '';
+            };
+
             const formData = {
                 tanggal: document.getElementById('inputTanggal').value,
                 petugas: document.getElementById('inputPetugas').value,
                 lokasi: document.getElementById('inputLokasi').value,
                 namaAset: document.getElementById('inputNamaAset').value,
                 kodeAset: document.getElementById('inputKodeAset').value,
-                kondisi: document.querySelector('input[name="kondisi"]:checked').value,
-                status: document.querySelector('input[name="status"]:checked').value,
-                kesesuaian: document.querySelector('input[name="sesuai"]:checked').value,
-                tindakLanjut: document.querySelector('input[name="tindakLanjut"]:checked').value,
+                kondisi: getSafeRadioVal('kondisi'),
+                status: getSafeRadioVal('status'),
+                kesesuaian: getSafeRadioVal('sesuai'),
+                tindakLanjut: getSafeRadioVal('tindakLanjut'),
                 fotoBase64: uploadedPhotos,
                 catatan: document.getElementById('inputCatatan').value
             };
@@ -498,7 +504,16 @@
                     method: 'POST',
                     body: JSON.stringify(formData)
                 });
-                const result = await response.json();
+                
+                // Ambil respons sebagai teks terlebih dahulu untuk menghindari crash json parsing
+                const responseText = await response.text();
+                let result;
+                try {
+                    result = JSON.parse(responseText);
+                } catch (jsonError) {
+                    console.error("Respons Server Bukan JSON:", responseText);
+                    throw new Error("Server tidak mengembalikan data yang valid. Pastikan Web App Apps Script diset aksesnya ke 'Anyone'.");
+                }
                 
                 if(result.status === 'success') {
                     alert('Data berhasil disimpan!');
@@ -506,10 +521,10 @@
                     // Invalidate cache
                     rawData = []; 
                 } else {
-                    alert('Gagal: ' + result.message);
+                    alert('Gagal dari Server: ' + result.message);
                 }
             } catch (error) {
-                alert('Terjadi kesalahan jaringan/CORS. Pastikan Web App diset ke "Anyone".');
+                alert('Terjadi kesalahan jaringan/CORS: ' + error.message);
                 console.error(error);
             }
             showLoading(false);
@@ -583,7 +598,9 @@
                     <td class="p-4 text-center">
                         <div class="flex flex-wrap justify-center min-w-[80px]">
                             ${photoIconsHtml}
-                            <button onclick="deleteData(${item.rowIndex})" class="inline-block p-1.5 sm:p-2 bg-gray-800 rounded text-red-400 hover:bg-gray-700 mb-1"><i class="ph ph-trash"></i></button>
+                            <button onclick="exportDataByRowIndex('PDF', ${item.rowIndex})" class="inline-block p-1.5 sm:p-2 bg-gray-800 rounded text-red-400 hover:bg-gray-700 mb-1 mr-1" title="Export PDF"><i class="ph ph-file-pdf"></i></button>
+                            <button onclick="exportDataByRowIndex('DOC', ${item.rowIndex})" class="inline-block p-1.5 sm:p-2 bg-gray-800 rounded text-blue-400 hover:bg-gray-700 mb-1 mr-1" title="Export DOC"><i class="ph ph-file-doc"></i></button>
+                            <button onclick="deleteData(${item.rowIndex})" class="inline-block p-1.5 sm:p-2 bg-gray-800 rounded text-red-400 hover:bg-gray-700 mb-1" title="Hapus"><i class="ph ph-trash"></i></button>
                         </div>
                     </td>
                 `;
@@ -678,8 +695,30 @@
             };
         }
 
-        async function generateExport(type) {
-            const dataObj = getFormDataObj();
+        async function exportDataByRowIndex(type, rowIndex) {
+            const item = rawData.find(d => d.rowIndex === rowIndex);
+            if (!item) return;
+
+            // Map data dari database tabel ke format objek untuk diexport
+            const mappedData = {
+                tanggal: new Date(item.Tanggal).toLocaleDateString('id-ID'),
+                petugas: item.Petugas,
+                lokasi: item.Lokasi,
+                namaAset: item['Nama Aset'],
+                kodeAset: item['Kode Aset'],
+                kondisi: item.Kondisi,
+                status: item.Status,
+                kesesuaian: item.Kesesuaian,
+                tindakLanjut: item['Tindak Lanjut'],
+                fotoBase64: item['Foto URL'] ? item['Foto URL'].split(',') : [], // Pengecekan ada/tidaknya foto
+                catatan: item.Catatan
+            };
+
+            await generateExport(type, mappedData);
+        }
+
+        async function generateExport(type, providedDataObj = null) {
+            const dataObj = providedDataObj || getFormDataObj();
             if(!dataObj.namaAset || !dataObj.kodeAset) {
                 alert("Mohon isi Nama Aset dan Kode Aset terlebih dahulu untuk di-export.");
                 return;
