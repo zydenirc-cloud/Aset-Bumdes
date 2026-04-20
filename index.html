@@ -22,8 +22,6 @@
         .radio-card input[type="radio"]:checked + label {
             border-color: #3b82f6; background: rgba(59, 130, 246, 0.1); color: #60a5fa; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
         }
-        .loader { border: 3px solid #374151; border-radius: 50%; border-top: 3px solid #3b82f6; width: 24px; height: 24px; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
         /* Print Template */
         #exportTemplate { display: none; background: white; color: black; padding: 40px; font-family: 'Times New Roman', Times, serif; font-size: 14px; width: 800px; margin: 0 auto; box-sizing: border-box; }
@@ -52,10 +50,25 @@
         </div>
     </nav>
 
-    <!-- Overlay Loader (Diperbarui dengan efek transisi) -->
-    <div id="loadingOverlay" class="fixed inset-0 bg-black/80 z-[100] flex flex-col items-center justify-center backdrop-blur-sm transition-all duration-300 opacity-0 pointer-events-none">
-        <div class="loader mb-4 w-12 h-12 border-4"></div>
-        <p class="text-blue-400 font-medium animate-pulse" id="loadingText">Sinkronisasi data...</p>
+    <!-- Overlay Loader (Animasi Modern Baru) -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-gray-950/90 z-[100] flex flex-col items-center justify-center backdrop-blur-md transition-all duration-300 opacity-0 pointer-events-none">
+        <div class="relative flex justify-center items-center mb-6">
+            <!-- Pinging background -->
+            <div class="absolute animate-ping w-16 h-16 rounded-full bg-blue-600/40"></div>
+            <!-- Outer spinning ring -->
+            <div class="absolute w-24 h-24 rounded-full border-t-2 border-l-2 border-transparent border-t-blue-500 animate-[spin_1.5s_linear_infinite]"></div>
+            <!-- Inner spinning ring (reverse) -->
+            <div class="absolute w-16 h-16 rounded-full border-r-2 border-b-2 border-transparent border-b-blue-400 animate-[spin_1s_linear_infinite_reverse]"></div>
+            <!-- Center Icon -->
+            <i class="ph-fill ph-database text-blue-500 text-3xl animate-pulse"></i>
+        </div>
+        <p class="text-white font-semibold tracking-widest uppercase text-sm" id="loadingText">Sinkronisasi data...</p>
+        <!-- Bouncing dots -->
+        <div class="flex gap-1.5 mt-4">
+            <div class="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 0s"></div>
+            <div class="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style="animation-delay: 0.15s"></div>
+            <div class="w-1.5 h-1.5 bg-blue-300 rounded-full animate-bounce" style="animation-delay: 0.3s"></div>
+        </div>
     </div>
 
     <!-- Toast Container (Notifikasi Animasi Baru) -->
