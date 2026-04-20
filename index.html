@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Manajemen Aset BUMDes</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        gray: {
+                            850: '#1f2937',
+                            900: '#111827',
+                            950: '#030712',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- html2pdf for PDF Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <style>
+        /* Custom Styles & Animations */
+        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .smooth-transition { transition: all 0.3s ease; }
+        
+        /* Custom Radio Button styling as Cards for better touch targets */
+        .radio-card input[type="radio"] { display: none; }
+        .radio-card label {
+            display: flex; align-items: center; justify-content: center;
+            padding: 1rem 0.5rem; border: 2px solid #374151; border-radius: 0.75rem;
+            cursor: pointer; transition: all 0.2s; background: #1f2937; text-align: center;
+            font-size: 0.875rem; font-weight: 500; color: #9ca3af;
+        }
+        .radio-card input[type="radio"]:checked + label {
+            border-color: #3b82f6; background: rgba(59, 130, 246, 0.1); color: #60a5fa;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+
+        /* Hide elements */
+        .hidden-view { display: none !important; }
+        
+        /* Loader */
+        .loader {
+            border: 3px solid #374151; border-radius: 50%; border-top: 3px solid #3b82f6;
+            width: 24px; height: 24px; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Print Template Styling (Hidden from UI, used only for generation) */
+        #exportTemplate {
+            display: none; background: white; color: black; padding: 40px;
+            font-family: 'Times New Roman', Times, serif; font-size: 14px;
+            width: 800px; margin: 0 auto; box-sizing: border-box;
+        }
+        .doc-header { text-align: center; font-weight: bold; font-size: 18px; margin-bottom: 30px; text-decoration: underline; }
+        .doc-row { display: flex; margin-bottom: 8px; }
+        .doc-label { width: 150px; font-weight: bold; }
+        .doc-colon { width: 20px; }
+        .doc-value { flex: 1; }
+        .doc-section { margin-top: 20px; margin-bottom: 10px; font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 5px; }
+        .doc-checkbox-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+        .doc-checkbox-item { display: flex; align-items: center; }
+        .doc-box { font-size: 18px; margin-right: 8px; }
+        .doc-ttd { margin-top: 50px; text-align: right; }
+        .doc-ttd-name { margin-top: 80px; font-weight: bold; text-decoration: underline; }
+    </style>
+</head>
+<body class="bg-gray-950 text-gray-100 antialiased min-h-screen flex flex-col">
+
+    <!-- Navbar -->
+    <nav class="bg-gray-900 border-b border-gray-800 sticky top-0 z-50">
+        <div class="max-w-4xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <i class="ph-fill ph-buildings text-blue-500 text-2xl"></i>
+                <h1 class="font-bold text-lg tracking-tight">Aset BUMDes</h1>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="switchView('form')" id="navForm" class="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium transition active:scale-95">Form Input</button>
+                <button onclick="switchView('dashboard')" id="navDash" class="px-4 py-2 rounded-lg bg-gray-800 text-gray-300 text-sm font-medium hover:bg-gray-700 transition active:scale-95">Dashboard</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Overlay Loader -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-black/80 z-[100] hidden flex-col items-center justify-center backdrop-blur-sm">
+        <div class="loader mb-4 w-12 h-12"></div>
+        <p class="text-blue-400 font-medium animate-pulse" id="loadingText">Memproses data...</p>
+    </div>
+
+    <!-- MAIN CONTAINER -->
+    <main class="flex-grow max-w-4xl mx-auto w-full p-4 pb-20">
+
+        <!-- ==================== VIEW 1: FORM INPUT ==================== -->
+        <div id="viewForm" class="space-y-6">
+            
+            <form id="assetForm" class="space-y-6">
+                <!-- 1. Informasi Umum -->
+                <div class="bg-gray-900 p-5 rounded-2xl border border-gray-800 shadow-sm">
+                    <h2 class="text-sm font-semibold text-blue-400 uppercase tracking-wider mb-4 flex items-center gap-2"><i class="ph ph-info"></i> Informasi Umum</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Tanggal</label>
+                            <input type="date" id="inputTanggal" required class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none transition">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Nama Petugas</label>
+                            <input type="text" id="inputPetugas" placeholder="Cth: Budi Santoso" required class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none transition">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-xs text-gray-400 mb-1">Lokasi Aset</label>
+                            <input type="text" id="inputLokasi" placeholder="Cth: Gudang Utama / Kantor Desa" required class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none transition">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Data Aset -->
+                <div class="bg-gray-900 p-5 rounded-2xl border border-gray-800 shadow-sm">
+                    <h2 class="text-sm font-semibold text-blue-400 uppercase tracking-wider mb-4 flex items-center gap-2"><i class="ph ph-box-cube"></i> Data Aset</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Nama Aset</label>
+                            <input type="text" id="inputNamaAset" placeholder="Cth: Mesin Pompa Air Honda" required class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none transition">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Kode Aset / Inventaris</label>
+                            <input type="text" id="inputKodeAset" placeholder="Cth: BUM-001-2023" required class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none transition">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Kondisi & Status (Grid layout for cards) -->
+                <div class="bg-gray-900 p-5 rounded-2xl border border-gray-800 shadow-sm">
+                    <h2 class="text-sm font-semibold text-blue-400 uppercase tracking-wider mb-4 flex items-center gap-2"><i class="ph ph-heartbeat"></i> Evaluasi Fisik</h2>
+                    
+                    <div class="mb-6">
+                        <label class="block text-xs text-gray-400 mb-2">Kondisi Aset</label>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                            <div class="radio-card"><input type="radio" name="kondisi" id="k_baik" value="Baik" required><label for="k_baik">Baik</label></div>
+                            <div class="radio-card"><input type="radio" name="kondisi" id="k_rr" value="Rusak Ringan"><label for="k_rr">Rusak Ringan</label></div>
+                            <div class="radio-card"><input type="radio" name="kondisi" id="k_rb" value="Rusak Berat"><label for="k_rb">Rusak Berat</label></div>
+                            <div class="radio-card"><input type="radio" name="kondisi" id="k_td" value="Tidak Ditemukan"><label for="k_td">Tak Ditemukan</label></div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-2">Status Penggunaan</label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div class="radio-card"><input type="radio" name="status" id="s_pakai" value="Digunakan" required><label for="s_pakai">Digunakan</label></div>
+                                <div class="radio-card"><input type="radio" name="status" id="s_nganggur" value="Tidak Digunakan"><label for="s_nganggur">Tidak Digunakan</label></div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-2">Kesesuaian Data Buku</label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div class="radio-card"><input type="radio" name="sesuai" id="ss_ya" value="Sesuai" required><label for="ss_ya">Sesuai</label></div>
+                                <div class="radio-card"><input type="radio" name="sesuai" id="ss_tdk" value="Tidak Sesuai"><label for="ss_tdk">Tidak Sesuai</label></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6">
+                        <label class="block text-xs text-gray-400 mb-2">Tindak Lanjut yang Disarankan</label>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                            <div class="radio-card"><input type="radio" name="tindakLanjut" id="tl_tidak" value="Tidak Perlu" required><label for="tl_tidak">Tidak Perlu</label></div>
+                            <div class="radio-card"><input type="radio" name="tindakLanjut" id="tl_perbaikan" value="Perbaikan"><label for="tl_perbaikan">Perbaikan</label></div>
+                            <div class="radio-card"><input type="radio" name="tindakLanjut" id="tl_ganti" value="Penggantian"><label for="tl_ganti">Penggantian</label></div>
+                            <div class="radio-card"><input type="radio" name="tindakLanjut" id="tl_hapus" value="Penghapusan"><label for="tl_hapus">Penghapusan</label></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. Dokumentasi & Catatan -->
+                <div class="bg-gray-900 p-5 rounded-2xl border border-gray-800 shadow-sm">
+                    <h2 class="text-sm font-semibold text-blue-400 uppercase tracking-wider mb-4 flex items-center gap-2"><i class="ph ph-camera"></i> Dokumentasi & Catatan</h2>
+                    
+                    <div class="mb-5">
+                        <label class="block text-xs text-gray-400 mb-2">Foto Aset (Bisa lebih dari 1 foto)</label>
+                        <div class="flex flex-col gap-4">
+                            <label for="inputFoto" class="w-full flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-700 rounded-xl cursor-pointer hover:bg-gray-800 transition">
+                                <i class="ph ph-upload-simple text-3xl text-gray-500 mb-2"></i>
+                                <span class="text-sm text-gray-400 font-medium">Ambil / Pilih Foto (Bisa Multi)</span>
+                                <input type="file" id="inputFoto" accept="image/*" capture="environment" multiple class="hidden" onchange="processImages(event)">
+                            </label>
+                            <div id="imagePreviewContainer" class="hidden flex flex-wrap gap-3">
+                                <!-- Previews will be injected here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Catatan Tambahan</label>
+                        <textarea id="inputCatatan" rows="3" placeholder="Tulis keterangan tambahan jika ada..." class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none transition resize-none"></textarea>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex flex-col sm:flex-row gap-3 pt-2">
+                    <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition active:scale-95">
+                        <i class="ph-fill ph-floppy-disk"></i> Simpan Data ke Server
+                    </button>
+                    <button type="button" onclick="resetForm()" class="sm:w-32 bg-gray-800 hover:bg-gray-700 text-gray-300 py-4 rounded-xl font-semibold transition active:scale-95">
+                        Reset Form
+                    </button>
+                </div>
+                
+                <div class="flex flex-col sm:flex-row gap-3 border-t border-gray-800 pt-6">
+                    <p class="w-full text-center text-xs text-gray-500 mb-2 sm:hidden">Export Form Saat Ini</p>
+                    <button type="button" onclick="generateExport('PDF')" class="flex-1 bg-red-900/40 text-red-400 border border-red-900/50 hover:bg-red-900/60 py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition">
+                        <i class="ph ph-file-pdf"></i> Export ke PDF
+                    </button>
+                    <button type="button" onclick="generateExport('DOC')" class="flex-1 bg-blue-900/40 text-blue-400 border border-blue-900/50 hover:bg-blue-900/60 py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition">
+                        <i class="ph ph-file-doc"></i> Export ke DOC
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- ==================== VIEW 2: DASHBOARD ==================== -->
+        <div id="viewDashboard" class="hidden-view space-y-4">
+            
+            <!-- Dashboard Controls -->
+            <div class="bg-gray-900 p-4 rounded-2xl border border-gray-800 shadow-sm flex flex-col sm:flex-row gap-4 justify-between items-center">
+                <div class="relative w-full sm:w-64">
+                    <i class="ph ph-magnifying-glass absolute left-3 top-3 text-gray-500"></i>
+                    <input type="text" id="searchInput" placeholder="Cari nama / kode aset..." class="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <button onclick="fetchData()" class="w-full sm:w-auto bg-gray-800 hover:bg-gray-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition active:scale-95">
+                    <i class="ph ph-arrows-clockwise"></i> Refresh Data
+                </button>
+            </div>
+
+            <!-- Table Container -->
+            <div class="bg-gray-900 rounded-2xl border border-gray-800 shadow-sm overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse whitespace-nowrap">
+                        <thead>
+                            <tr class="bg-gray-850 text-gray-400 text-xs uppercase tracking-wider">
+                                <th class="p-4 font-medium">Tanggal</th>
+                                <th class="p-4 font-medium">Aset / Kode</th>
+                                <th class="p-4 font-medium">Kondisi</th>
+                                <th class="p-4 font-medium">Lokasi</th>
+                                <th class="p-4 font-medium text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody" class="text-sm divide-y divide-gray-800">
+                            <!-- Data rows will be injected here -->
+                            <tr><td colspan="5" class="p-8 text-center text-gray-500">Klik "Refresh Data" untuk memuat</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Pagination -->
+                <div class="p-4 border-t border-gray-800 flex justify-between items-center text-sm text-gray-400">
+                    <button id="btnPrev" onclick="changePage(-1)" class="px-3 py-1 rounded bg-gray-800 disabled:opacity-50 hover:bg-gray-700">Prev</button>
+                    <span id="pageInfo">Halaman 1 / 1</span>
+                    <button id="btnNext" onclick="changePage(1)" class="px-3 py-1 rounded bg-gray-800 disabled:opacity-50 hover:bg-gray-700">Next</button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- HIDDEN TEMPLATE FOR PDF/DOC EXPORT -->
+    <div id="exportTemplate">
+        <div class="doc-header">FORM CEK ASET BUMDES</div>
+        
+        <div class="doc-row"><div class="doc-label">Tanggal</div><div class="doc-colon">:</div><div class="doc-value" id="doc_tgl"></div></div>
+        <div class="doc-row"><div class="doc-label">Petugas</div><div class="doc-colon">:</div><div class="doc-value" id="doc_petugas"></div></div>
+        <div class="doc-row"><div class="doc-label">Lokasi</div><div class="doc-colon">:</div><div class="doc-value" id="doc_lokasi"></div></div>
+        <br>
+        <div class="doc-row"><div class="doc-label">Nama Aset</div><div class="doc-colon">:</div><div class="doc-value" id="doc_nama"></div></div>
+        <div class="doc-row"><div class="doc-label">Kode Aset</div><div class="doc-colon">:</div><div class="doc-value" id="doc_kode"></div></div>
+
+        <div class="doc-section">KONDISI ASET</div>
+        <div class="doc-checkbox-group">
+            <div class="doc-checkbox-item"><span class="doc-box" id="bx_k_baik">☐</span> Baik</div>
+            <div class="doc-checkbox-item"><span class="doc-box" id="bx_k_rr">☐</span> Rusak Ringan</div>
+            <div class="doc-checkbox-item"><span class="doc-box" id="bx_k_rb">☐</span> Rusak Berat</div>
+            <div class="doc-checkbox-item"><span class="doc-box" id="bx_k_td">☐</span> Tidak Ditemukan</div>
+        </div>
+
+        <div class="doc-section">STATUS</div>
+        <div class="doc-checkbox-group">
+            <div class="doc-checkbox-item"><span class="doc-box" id="bx_s_pakai">☐</span> Digunakan</div>
+            <div class="doc-checkbox-item"><span class="doc-box" id="bx_s_nganggur">☐</span> Tidak Digunakan</div>
+        </div>
+
+        <div class="doc-section">KESESUAIAN DATA</div>
+        <div class="doc-checkbox-group">
+            <div class="doc-checkbox-item"><span class="doc-box" id="bx_ss_ya">☐</span> Sesuai</div>
+            <div class="doc-checkbox-item"><span class="doc-box" id="bx_ss_tdk">☐</span> Tidak Sesuai</div>
+        </div>
+
+        <div class="doc-section">TINDAK LANJUT</div>
+        <div class="doc-checkbox-group">
+            <div class="doc-checkbox-item"><span class="doc-box" id="bx_tl_tidak">☐</span> Tidak Perlu</div>
+            <div class="doc-checkbox-item"><span class="doc-box" id="bx_tl_perbaikan">☐</span> Perbaikan</div>
+            <div class="doc-checkbox-item"><span class="doc-box" id="bx_tl_ganti">☐</span> Penggantian</div>
+            <div class="doc-checkbox-item"><span class="doc-box" id="bx_tl_hapus">☐</span> Penghapusan</div>
+        </div>
+
+        <div class="doc-section">DOKUMENTASI</div>
+        <div class="doc-checkbox-group">
+            <div class="doc-checkbox-item"><span class="doc-box" id="bx_foto_ya">☐</span> Foto Diambil</div>
+            <div class="doc-checkbox-item"><span class="doc-box" id="bx_foto_tdk">☐</span> Tidak Ada Foto</div>
+        </div>
+
+        <div class="doc-section">CATATAN:</div>
+        <div style="min-height: 50px; padding: 10px; border: 1px dashed #ccc;" id="doc_catatan"></div>
+
+        <div class="doc-ttd">
+            <div>TTD PETUGAS</div>
+            <div class="doc-ttd-name" id="doc_ttd_nama">( ...................................... )</div>
+        </div>
+    </div>
+
+
+    <script>
+        /** * KONFIGURASI API
+         * Ganti URL_API dengan URL Web App Apps Script Anda setelah di Deploy!
+         */
+        const URL_API = "https://script.google.com/macros/s/AKfycbxl-d48BBfa74QjBXrAgesB5eXmUfUe_RPdHN0avzvGQd9mko1ssSiuyV3e07oaeGEVWg/exec"; 
+
+        // State variables
+        let rawData = [];
+        let filteredData = [];
+        let currentPage = 1;
+        const rowsPerPage = 10;
+        let uploadedPhotos = []; // Array to store multiple base64 images
+
+        // Init
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set default date to today
+            document.getElementById('inputTanggal').valueAsDate = new Date();
+            
+            // Search listener
+            document.getElementById('searchInput').addEventListener('input', (e) => {
+                const term = e.target.value.toLowerCase();
+                filteredData = rawData.filter(item => 
+                    item['Nama Aset'].toLowerCase().includes(term) || 
+                    item['Kode Aset'].toLowerCase().includes(term)
+                );
+                currentPage = 1;
+                renderTable();
+            });
+        });
+
+        // Toggle View Form / Dashboard
+        function switchView(view) {
+            const vForm = document.getElementById('viewForm');
+            const vDash = document.getElementById('viewDashboard');
+            const nForm = document.getElementById('navForm');
+            const nDash = document.getElementById('navDash');
+
+            if(view === 'form') {
+                vForm.classList.remove('hidden-view');
+                vDash.classList.add('hidden-view');
+                nForm.classList.replace('bg-gray-800', 'bg-blue-600');
+                nForm.classList.replace('text-gray-300', 'text-white');
+                nDash.classList.replace('bg-blue-600', 'bg-gray-800');
+                nDash.classList.replace('text-white', 'text-gray-300');
+            } else {
+                vForm.classList.add('hidden-view');
+                vDash.classList.remove('hidden-view');
+                nDash.classList.replace('bg-gray-800', 'bg-blue-600');
+                nDash.classList.replace('text-gray-300', 'text-white');
+                nForm.classList.replace('bg-blue-600', 'bg-gray-800');
+                nForm.classList.replace('text-white', 'text-gray-300');
+                if(rawData.length === 0) fetchData();
+            }
+        }
+
+        // Image Processing (Resize & Base64) to prevent payload too large
+        async function processImages(event) {
+            const files = event.target.files;
+            if(!files || files.length === 0) return;
+
+            const container = document.getElementById('imagePreviewContainer');
+            container.classList.remove('hidden');
+
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const base64 = await compressImage(file);
+                uploadedPhotos.push(base64);
+                renderImagePreviews();
+            }
+            // Reset input file agar bisa memilih file yang sama lagi jika dihapus
+            document.getElementById('inputFoto').value = '';
+        }
+
+        function compressImage(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = function(e) {
+                    const imgElement = document.createElement("img");
+                    imgElement.src = e.target.result;
+                    imgElement.onload = function() {
+                        const canvas = document.createElement("canvas");
+                        const ctx = canvas.getContext("2d");
+                        const MAX_WIDTH = 800; // Kompresi
+                        let scaleSize = 1;
+                        if(imgElement.width > MAX_WIDTH) {
+                            scaleSize = MAX_WIDTH / imgElement.width;
+                        }
+                        canvas.width = imgElement.width * scaleSize;
+                        canvas.height = imgElement.height * scaleSize;
+                        
+                        ctx.drawImage(imgElement, 0, 0, canvas.width, canvas.height);
+                        const compressedBase64 = canvas.toDataURL("image/jpeg", 0.7);
+                        resolve(compressedBase64);
+                    }
+                }
+            });
+        }
+
+        function renderImagePreviews() {
+            const container = document.getElementById('imagePreviewContainer');
+            container.innerHTML = '';
+            
+            if(uploadedPhotos.length === 0) {
+                container.classList.add('hidden');
+                return;
+            }
+
+            uploadedPhotos.forEach((base64, index) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl border border-gray-700 overflow-hidden shrink-0';
+                wrapper.innerHTML = `
+                    <img src="${base64}" class="w-full h-full object-cover">
+                    <button type="button" onclick="removePhoto(${index})" class="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition"><i class="ph ph-x text-xs"></i></button>
+                `;
+                container.appendChild(wrapper);
+            });
+        }
+
+        function removePhoto(index) {
+            uploadedPhotos.splice(index, 1);
+            renderImagePreviews();
+        }
+
+        function clearImage() {
+            uploadedPhotos = [];
+            renderImagePreviews();
+            document.getElementById('inputFoto').value = '';
+        }
+
+        function resetForm() {
+            document.getElementById('assetForm').reset();
+            document.getElementById('inputTanggal').valueAsDate = new Date();
+            clearImage();
+        }
+
+        function showLoading(show, text = "Memproses...") {
+            document.getElementById('loadingText').innerText = text;
+            if(show) document.getElementById('loadingOverlay').classList.remove('hidden');
+            else document.getElementById('loadingOverlay').classList.add('hidden');
+        }
+
+        // Submit Form to Apps Script
+        document.getElementById('assetForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if(URL_API === "ISI_DENGAN_URL_WEB_APP_APPS_SCRIPT_ANDA") {
+                alert("Mohon masukkan URL Apps Script terlebih dahulu di dalam kode file index.html!");
+                return;
+            }
+
+            const formData = {
+                tanggal: document.getElementById('inputTanggal').value,
+                petugas: document.getElementById('inputPetugas').value,
+                lokasi: document.getElementById('inputLokasi').value,
+                namaAset: document.getElementById('inputNamaAset').value,
+                kodeAset: document.getElementById('inputKodeAset').value,
+                kondisi: document.querySelector('input[name="kondisi"]:checked').value,
+                status: document.querySelector('input[name="status"]:checked').value,
+                kesesuaian: document.querySelector('input[name="sesuai"]:checked').value,
+                tindakLanjut: document.querySelector('input[name="tindakLanjut"]:checked').value,
+                fotoBase64: uploadedPhotos,
+                catatan: document.getElementById('inputCatatan').value
+            };
+
+            showLoading(true, "Menyimpan data ke server...");
+
+            try {
+                const response = await fetch(URL_API + "?action=create", {
+                    method: 'POST',
+                    body: JSON.stringify(formData)
+                });
+                const result = await response.json();
+                
+                if(result.status === 'success') {
+                    alert('Data berhasil disimpan!');
+                    resetForm();
+                    // Invalidate cache
+                    rawData = []; 
+                } else {
+                    alert('Gagal: ' + result.message);
+                }
+            } catch (error) {
+                alert('Terjadi kesalahan jaringan/CORS. Pastikan Web App diset ke "Anyone".');
+                console.error(error);
+            }
+            showLoading(false);
+        });
+
+        // Dashboard: Fetch Data
+        async function fetchData() {
+            if(URL_API === "ISI_DENGAN_URL_WEB_APP_APPS_SCRIPT_ANDA") return;
+            
+            showLoading(true, "Mengambil data...");
+            try {
+                const response = await fetch(URL_API);
+                const result = await response.json();
+                if(result.status === 'success') {
+                    rawData = result.data;
+                    filteredData = [...rawData];
+                    currentPage = 1;
+                    renderTable();
+                }
+            } catch (error) {
+                console.error("Fetch error:", error);
+                document.getElementById('tableBody').innerHTML = `<tr><td colspan="5" class="p-4 text-center text-red-500">Gagal memuat data</td></tr>`;
+            }
+            showLoading(false);
+        }
+
+        // Dashboard: Render Table
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            const startIndex = (currentPage - 1) * rowsPerPage;
+            const endIndex = startIndex + rowsPerPage;
+            const currentData = filteredData.slice(startIndex, endIndex);
+
+            if(currentData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-gray-500">Tidak ada data ditemukan</td></tr>`;
+                updatePagination();
+                return;
+            }
+
+            currentData.forEach(item => {
+                const tgl = new Date(item.Tanggal).toLocaleDateString('id-ID');
+                
+                // Menangani multiple foto
+                let photoIconsHtml = '';
+                if(item['Foto URL']) {
+                    const urls = item['Foto URL'].split(',');
+                    urls.forEach(url => {
+                        if(url.trim()) {
+                            photoIconsHtml += `<a href="${url.trim()}" target="_blank" class="inline-block p-1.5 sm:p-2 bg-gray-800 rounded text-blue-400 hover:bg-gray-700 mb-1 mr-1"><i class="ph ph-image"></i></a>`;
+                        }
+                    });
+                }
+                
+                // Color coding kondisi
+                let kondColor = "text-green-400";
+                if(item.Kondisi === "Rusak Ringan") kondColor = "text-yellow-400";
+                if(item.Kondisi === "Rusak Berat") kondColor = "text-orange-400";
+                if(item.Kondisi === "Tidak Ditemukan") kondColor = "text-red-400";
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="p-4">${tgl}</td>
+                    <td class="p-4">
+                        <div class="font-medium text-white">${item['Nama Aset']}</div>
+                        <div class="text-xs text-gray-500">${item['Kode Aset']}</div>
+                    </td>
+                    <td class="p-4 font-medium ${kondColor}">${item.Kondisi}</td>
+                    <td class="p-4 text-gray-400">${item.Lokasi}</td>
+                    <td class="p-4 text-center">
+                        <div class="flex flex-wrap justify-center min-w-[80px]">
+                            ${photoIconsHtml}
+                            <button onclick="deleteData(${item.rowIndex})" class="inline-block p-1.5 sm:p-2 bg-gray-800 rounded text-red-400 hover:bg-gray-700 mb-1"><i class="ph ph-trash"></i></button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            updatePagination();
+        }
+
+        function updatePagination() {
+            const totalPages = Math.ceil(filteredData.length / rowsPerPage) || 1;
+            document.getElementById('pageInfo').innerText = `Halaman ${currentPage} / ${totalPages}`;
+            document.getElementById('btnPrev').disabled = currentPage === 1;
+            document.getElementById('btnNext').disabled = currentPage === totalPages;
+        }
+
+        function changePage(dir) {
+            currentPage += dir;
+            renderTable();
+        }
+
+        async function deleteData(rowIndex) {
+            if(!confirm('Yakin ingin menghapus data ini?')) return;
+            
+            showLoading(true, "Menghapus data...");
+            try {
+                const response = await fetch(URL_API + "?action=delete", {
+                    method: 'POST',
+                    body: JSON.stringify({ rowIndex: rowIndex })
+                });
+                const result = await response.json();
+                if(result.status === 'success') {
+                    fetchData(); // reload
+                }
+            } catch(e) {
+                alert("Gagal menghapus.");
+            }
+            showLoading(false);
+        }
+
+
+        // ================= EXPORT LOGIC =================
+        function populateExportTemplate(dataObj) {
+            // Reset all checkboxes
+            document.querySelectorAll('.doc-box').forEach(el => el.innerText = '☐');
+
+            // Fill text
+            document.getElementById('doc_tgl').innerText = dataObj.tanggal || '-';
+            document.getElementById('doc_petugas').innerText = dataObj.petugas || '-';
+            document.getElementById('doc_lokasi').innerText = dataObj.lokasi || '-';
+            document.getElementById('doc_nama').innerText = dataObj.namaAset || '-';
+            document.getElementById('doc_kode').innerText = dataObj.kodeAset || '-';
+            document.getElementById('doc_catatan').innerText = dataObj.catatan || '';
+            document.getElementById('doc_ttd_nama').innerText = `( ${dataObj.petugas || '......................................'} )`;
+
+            // Checkboxes mapper
+            const checkMap = {
+                'Baik': 'bx_k_baik', 'Rusak Ringan': 'bx_k_rr', 'Rusak Berat': 'bx_k_rb', 'Tidak Ditemukan': 'bx_k_td',
+                'Digunakan': 'bx_s_pakai', 'Tidak Digunakan': 'bx_s_nganggur',
+                'Sesuai': 'bx_ss_ya', 'Tidak Sesuai': 'bx_ss_tdk',
+                'Tidak Perlu': 'bx_tl_tidak', 'Perbaikan': 'bx_tl_perbaikan', 'Penggantian': 'bx_tl_ganti', 'Penghapusan': 'bx_tl_hapus'
+            };
+
+            // Apply checks
+            if(dataObj.kondisi && checkMap[dataObj.kondisi]) document.getElementById(checkMap[dataObj.kondisi]).innerText = '☑';
+            if(dataObj.status && checkMap[dataObj.status]) document.getElementById(checkMap[dataObj.status]).innerText = '☑';
+            if(dataObj.kesesuaian && checkMap[dataObj.kesesuaian]) document.getElementById(checkMap[dataObj.kesesuaian]).innerText = '☑';
+            if(dataObj.tindakLanjut && checkMap[dataObj.tindakLanjut]) document.getElementById(checkMap[dataObj.tindakLanjut]).innerText = '☑';
+            
+            if(dataObj.fotoBase64 && dataObj.fotoBase64.length > 0) document.getElementById('bx_foto_ya').innerText = '☑';
+            else document.getElementById('bx_foto_tdk').innerText = '☑';
+        }
+
+        function getFormDataObj() {
+            // Get current form data safely
+            const getRadioVal = (name) => {
+                const el = document.querySelector(`input[name="${name}"]:checked`);
+                return el ? el.value : '';
+            }
+            return {
+                tanggal: document.getElementById('inputTanggal').value,
+                petugas: document.getElementById('inputPetugas').value,
+                lokasi: document.getElementById('inputLokasi').value,
+                namaAset: document.getElementById('inputNamaAset').value,
+                kodeAset: document.getElementById('inputKodeAset').value,
+                kondisi: getRadioVal('kondisi'),
+                status: getRadioVal('status'),
+                kesesuaian: getRadioVal('sesuai'),
+                tindakLanjut: getRadioVal('tindakLanjut'),
+                fotoBase64: uploadedPhotos,
+                catatan: document.getElementById('inputCatatan').value
+            };
+        }
+
+        async function generateExport(type) {
+            const dataObj = getFormDataObj();
+            if(!dataObj.namaAset || !dataObj.kodeAset) {
+                alert("Mohon isi Nama Aset dan Kode Aset terlebih dahulu untuk di-export.");
+                return;
+            }
+
+            showLoading(true, `Generating ${type}...`);
+            
+            // 1. Populate Hidden HTML Template
+            populateExportTemplate(dataObj);
+            const templateEl = document.getElementById('exportTemplate');
+            
+            // Tampilkan sementara untuk render
+            templateEl.style.display = 'block';
+
+            const filename = `Cek_Aset_${dataObj.kodeAset}.`;
+
+            if (type === 'PDF') {
+                const opt = {
+                    margin:       0.5,
+                    filename:     filename + 'pdf',
+                    image:        { type: 'jpeg', quality: 0.98 },
+                    html2canvas:  { scale: 2 },
+                    jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+                };
+                await html2pdf().set(opt).from(templateEl).save();
+                
+            } else if (type === 'DOC') {
+                // Word Export Logic via HTML Blob
+                const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Export DOC</title></head><body>";
+                const footer = "</body></html>";
+                const sourceHTML = header + templateEl.outerHTML + footer;
+                
+                const source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(sourceHTML);
+                const fileDownload = document.createElement("a");
+                document.body.appendChild(fileDownload);
+                fileDownload.href = source;
+                fileDownload.download = filename + 'doc';
+                fileDownload.click();
+                document.body.removeChild(fileDownload);
+            }
+
+            // Sembunyikan lagi
+            templateEl.style.display = 'none';
+            showLoading(false);
+        }
+    </script>
+</body>
+</html>
